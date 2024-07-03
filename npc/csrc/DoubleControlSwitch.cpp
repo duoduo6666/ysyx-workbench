@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <nvboard.h>
 #include "verilated.h"
 
 #include "VDoubleControlSwitch.h"
+
+void nvboard_bind_all_pins(VDoubleControlSwitch* top);
 
 int main(int argc, char** argv) {
 	VerilatedContext* contextp = new VerilatedContext;
@@ -12,17 +15,13 @@ int main(int argc, char** argv) {
 	contextp->commandArgs(argc, argv);
 	VDoubleControlSwitch* top = new VDoubleControlSwitch{contextp};
 		
-	int i = 100;
-	while (i) {
+	
+  	nvboard_bind_all_pins(top);
+  	nvboard_init();
+	while (1) {
 		contextp->timeInc(1);
-		int a = rand() & 1;
-		int b = rand() & 1;
-		top->a = a;
-		top->b = b;
+		nvboard_update();
 		top->eval();
-		printf("a = %d, b = %d, f = %d\n", a, b, top->f);
-		assert(top->f == (a ^ b));
-		i--;
 	}
 
 	top->final();

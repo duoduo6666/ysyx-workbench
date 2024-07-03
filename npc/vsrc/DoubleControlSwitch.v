@@ -5,7 +5,7 @@ module DoubleControlSwitch(
 );
 	initial begin
 		if ($test$plusargs("trace") != 0) begin
-			$dumpfile("vlt_dump.vcd");
+			$dumpfile("vlt_dump.fst");
 			$dumpvars();
 		end
 	end

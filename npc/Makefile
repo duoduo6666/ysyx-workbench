@@ -18,13 +18,14 @@ sim:
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/light.nxdc $(BUILD_DIR)/light_auto_bind.cpp
 	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
 		--top-module light -o light \
-	        build/light_auto_bind.cpp csrc/light.cpp vsrc/light.v
+	        $(BUILD_DIR)/light_auto_bind.cpp csrc/light.cpp vsrc/light.v
 	$(BUILD_DIR)/light 
 
 DoubleControlSwitch:
-	$(VERILATOR) $(VERILATOR_CFLAGS) \
+	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/DoubleControlSwitch.nxdc $(BUILD_DIR)/DoubleControlSwitch_auto_bind.cpp
+	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS)\
 		--top-module DoubleControlSwitch -o DoubleControlSwitch \
-		csrc/DoubleControlSwitch.cpp vsrc/DoubleControlSwitch.v
-	obj_dir/VDoubleControlSwitch +trace
+		$(BUILD_DIR)/DoubleControlSwitch_auto_bind.cpp csrc/DoubleControlSwitch.cpp vsrc/DoubleControlSwitch.v
+	$(BUILD_DIR)/DoubleControlSwitch
 
 include ../Makefile
