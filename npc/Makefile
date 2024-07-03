@@ -9,3 +9,4 @@ sim:
 
 
 include ../Makefile
+include $(NVBOARD_HOME)/scripts/nvboard.mk
