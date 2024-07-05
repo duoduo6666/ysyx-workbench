@@ -8,6 +8,7 @@ include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVBOARD_FLAGS = $(NVBOARD_ARCHIVE) -$(addprefix -CFLAGS -I, $(NVBOARD_USR_INC)) $(addprefix -LDFLAGS , $(LDFLAGS))
 
 $(shell mkdir -p $(BUILD_DIR))
+$(shell mkdir -p $(BUILD_DIR)/labs)
 
 all:
 	@echo "Write this Makefile by your self."
@@ -15,6 +16,8 @@ all:
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by your self."
+
+light:
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/light.nxdc $(BUILD_DIR)/light_auto_bind.cpp
 	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
 		--top-module light -o light \
@@ -27,5 +30,12 @@ DoubleControlSwitch:
 		--top-module DoubleControlSwitch -o DoubleControlSwitch \
 		$(BUILD_DIR)/DoubleControlSwitch_auto_bind.cpp csrc/DoubleControlSwitch.cpp vsrc/DoubleControlSwitch.v
 	$(BUILD_DIR)/DoubleControlSwitch
+
+lab0:
+	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/labs/lab0.nxdc $(BUILD_DIR)/labs/lab0_auto_bind.cpp
+	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
+		--top-module lab0 -o labs/lab0 \
+	        $(BUILD_DIR)/labs/lab0_auto_bind.cpp csrc/labs/lab0.cpp vsrc/labs/lab0.v
+	$(BUILD_DIR)/labs/lab0
 
 include ../Makefile
