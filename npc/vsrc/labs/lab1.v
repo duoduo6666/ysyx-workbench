@@ -1,5 +1,5 @@
 // 2 bit 4 to 1 mux
-module lab0(
+module lab1(
     input[1:0] X0, 
     input[1:0] X1, 
     input[1:0] X2, 
@@ -9,7 +9,7 @@ module lab0(
     );
 	initial begin
 		if ($test$plusargs("trace") != 0) begin
-			$dumpfile("vlt_dump.fst");
+			$dumpfile("lab1.fst");
 			$dumpvars();
 		end
 	end
