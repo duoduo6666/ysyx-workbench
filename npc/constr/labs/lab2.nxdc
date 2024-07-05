@@ -1,0 +1,7 @@
+top=lab2
+
+en (SW8)
+x (SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0)
+y (LD2 ,LD1, LD0)
+i (LD3)
+hex (SEG0G, SEG0F, SEG0E, SEG0D, SEG0C, SEG0B, SEG0A)
