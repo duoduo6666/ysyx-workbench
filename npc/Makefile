@@ -45,4 +45,11 @@ lab2:
 	        $(BUILD_DIR)/labs/lab2_auto_bind.cpp csrc/labs/lab2.cpp vsrc/labs/lab2.v
 	$(BUILD_DIR)/labs/lab2
 
+lab3:
+	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/labs/lab3.nxdc $(BUILD_DIR)/labs/lab3_auto_bind.cpp
+	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
+		--top-module lab3 -o labs/lab3 \
+	        $(BUILD_DIR)/labs/lab3_auto_bind.cpp csrc/labs/lab3.cpp vsrc/labs/lab3.v
+	$(BUILD_DIR)/labs/lab3
+	
 include ../Makefile

@@ -1,0 +1,10 @@
+top=lab3
+
+func (SW15, SW14, SW13)
+A (SW7, SW6, SW5, SW4)
+B (SW3, SW2, SW1, SW0)
+
+result (LD3, LD2, LD1, LD0)
+carry (LD6)
+zero (LD5)
+overflow (LD4)
