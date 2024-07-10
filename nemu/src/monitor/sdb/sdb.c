@@ -15,9 +15,12 @@
 
 #include <isa.h>
 #include <cpu/cpu.h>
+#include <memory/paddr.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+
+#include <stdlib.h>
 
 static int is_batch_mode = false;
 
@@ -54,6 +57,32 @@ static int cmd_q(char *args) {
 
 static int cmd_help(char *args);
 
+static int cmd_si(char *args) {
+  char *endptr;
+  long num = 1;
+  if (args) {num = strtol(args, &endptr, 10);}
+  cpu_exec(num);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  if (!args) {Log("r: 打印寄存器状态, w: 打印监视点信息"); return 1;}
+  if (args[0] == 'r') {isa_reg_display();}
+  if (args[0] == 'w') {}
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  if (!args) {Log("x N EXPR 求出表达式EXPR的值, 将结果作为起始内存地址, 以十六进制形式输出连续的N个4字节"); return 1;}
+  int num = 0;
+  int ptr = 0;
+  sscanf(args, "%d %x", &num, &ptr);
+  for (int i = 0; i < num; i++){
+    printf("0x%x: 0x%x\n", ptr+i*4, paddr_read(ptr+i*4, 4));
+  }
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -64,7 +93,9 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
 
   /* TODO: Add more commands */
-
+  {"si", "让程序单步执行N条指令后暂停执行,当N没有给出时, 缺省为1", cmd_si},
+  {"info", "r: 打印寄存器状态 w: 打印监视点信息", cmd_info},
+  {"x", "求出表达式EXPR的值, 将结果作为起始内存地址, 以十六进制形式输出连续的N个4字节", cmd_x},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
