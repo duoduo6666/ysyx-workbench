@@ -77,6 +77,7 @@ static int cmd_x(char *args) {
   int num = 0;
   int ptr = 0;
   sscanf(args, "%d %x", &num, &ptr);
+  if ((PMEM_LEFT > ptr) | (ptr+num*4-1 > PMEM_RIGHT)) {Log("内存地址应在 0x%x-0x%x 之间", PMEM_LEFT, PMEM_RIGHT); return 1;}
   for (int i = 0; i < num; i++){
     printf("0x%x: 0x%x\n", ptr+i*4, paddr_read(ptr+i*4, 4));
   }
