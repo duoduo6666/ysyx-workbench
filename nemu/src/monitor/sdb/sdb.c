@@ -26,6 +26,7 @@ static int is_batch_mode = false;
 
 void init_regex();
 void init_wp_pool();
+word_t expr(char *e, bool *success);
 
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -84,6 +85,13 @@ static int cmd_x(char *args) {
   return 0;
 }
 
+static int cmd_p(char *args) {
+  if (!args) {Log("p EXPR 求出表达式EXPR的值"); return 1;}
+  bool success;
+  printf("%d\n", expr(args, &success));
+  return 0;
+}
+
 static struct {
   const char *name;
   const char *description;
@@ -97,6 +105,7 @@ static struct {
   {"si", "让程序单步执行N条指令后暂停执行,当N没有给出时, 缺省为1", cmd_si},
   {"info", "r: 打印寄存器状态 w: 打印监视点信息", cmd_info},
   {"x", "求出表达式EXPR的值, 将结果作为起始内存地址, 以十六进制形式输出连续的N个4字节", cmd_x},
+  {"p", "求出表达式EXPR的值", cmd_p},
 };
 
 #define NR_CMD ARRLEN(cmd_table)

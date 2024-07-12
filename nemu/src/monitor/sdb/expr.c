@@ -24,7 +24,7 @@ enum {
   TK_NOTYPE = 256, TK_EQ,
 
   /* TODO: Add more token types */
-
+  TK_DEC, TK_OPCODE
 };
 
 static struct rule {
@@ -35,9 +35,14 @@ static struct rule {
   /* TODO: Add more rules.
    * Pay attention to the precedence level of different rules.
    */
-
+  {"[0-9]+", TK_DEC},
   {" +", TK_NOTYPE},    // spaces
-  {"\\+", '+'},         // plus
+  {"\\+", TK_OPCODE},         // plus
+  {"\\-", TK_OPCODE},         // sub
+  {"\\*", TK_OPCODE},         // *
+  {"\\/", TK_OPCODE},         // /
+  {"\\(", '('},         // *
+  {"\\)", ')'},         // /
   {"==", TK_EQ},        // equal
 };
 
@@ -93,11 +98,18 @@ static bool make_token(char *e) {
          * to record the token in the array `tokens'. For certain types
          * of tokens, some extra actions should be performed.
          */
-
+        Assert(substr_len < 32, "token过大");
+        Assert(nr_token <= 32, "token数量过多");
         switch (rules[i].token_type) {
-          default: TODO();
+          case TK_NOTYPE:
+            break;
+          default: 
+            tokens[nr_token].type = rules[i].token_type; 
+            strncpy(tokens[nr_token].str, substr_start, substr_len); 
+            tokens[nr_token].str[substr_len] = 0;
+            nr_token++;
+            break;
         }
-
         break;
       }
     }
@@ -108,9 +120,108 @@ static bool make_token(char *e) {
     }
   }
 
+  for (;nr_token < 32; nr_token++) {
+    tokens[nr_token].type = 0;
+  }
   return true;
 }
 
+bool check_parentheses(int p, int q) {
+  int deep = 0;
+  if ((tokens[p].type != '(') | (tokens[q].type != ')')) {
+    return false;
+  }
+  for (int i = p; i <= q; i++) {
+    if (tokens[i].type == '(') {
+      deep++;
+    }
+    if (tokens[i].type == ')') {
+      if ((deep == 1) & (i != q)) {
+        return false;
+      }
+      deep--;
+    }
+    if (deep < 0) {
+      return false;
+    }
+  }
+  if (deep == 0) {
+    return true;
+  }
+  return false;
+}
+
+word_t eval(int p, int q) {
+  Assert(p <= q, "p > q");
+  if (p == q) {
+    Assert(tokens[p].type == TK_DEC, "error!");
+    return atoi(tokens[p].str);
+  }
+  else if ((q-p == 1) & ((tokens[p].str[0] == '-'))) {
+    Assert(tokens[p+1].type == TK_DEC, "error!");
+    return -atoi(tokens[p+1].str);
+  }
+  else if (check_parentheses(p, q) == true){
+    return eval(p + 1, q - 1);
+  }
+  else{
+    int op = 0;
+    // 寻找主运算符
+    for (int i = p; tokens[i].type != 0; i++){
+      // 跳过 '()'
+      if (tokens[i].type == '(') {
+        for (; tokens[i].type != ')'; i++) {Assert(i < 32, "表达式不合法");}
+      }
+      Assert(i < 32, "表达式不合法");
+      if (tokens[i].type == TK_OPCODE){
+        if (tokens[i].str[0] == '+') {
+          op = i;
+          break;
+        }
+        else if ((tokens[i].str[0] == '-')) {
+          if ((i == 0) | (tokens[i-1].type == TK_OPCODE)) {
+            continue;
+          }
+          op = i;
+          break;
+        }
+        else if ((tokens[i].str[0] == '*') | (tokens[i].str[0] == '/')){
+          op = i;
+          continue;
+        }
+        else {
+          Assert(0, "未知运算符 %c", tokens[i].str[0]);
+        }
+      }
+    }
+    Log("op: %d", op);
+
+    int val1 = eval(p, op - 1);
+    Log("val1: %d", val1);
+    int val2 = eval(op + 1, q);
+    Log("val2: %d", val2);
+    switch (tokens[op].str[0]){
+    case '+':
+      return val1 + val2;
+      break;
+    case '-':
+      return val1 - val2;
+      break;
+    case '*':
+      return val1 * val2;
+      break;
+    case '/':
+      if (val2 == 0) {Assert(0, "除数为0");}
+      return val1 / val2;
+      break;
+    
+    default:
+      Assert(0, "未知运算符 %c", tokens[op].str[0]);
+      break;
+    }
+  }
+  return 0;
+}
 
 word_t expr(char *e, bool *success) {
   if (!make_token(e)) {
@@ -119,7 +230,15 @@ word_t expr(char *e, bool *success) {
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  TODO();
+  // for (int i = 0; i < 32; i++){
+  //   Log("token[%d] = %d %s",
+  //     i, tokens[i].type, tokens[i].str);
+  // }
 
-  return 0;
+  int q;
+  for (q=31; tokens[q].type == 0; q--){
+    Assert(q >= 0, "空表达式");
+  }
+
+  return eval(0, q);
 }
