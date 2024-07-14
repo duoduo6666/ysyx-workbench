@@ -28,6 +28,18 @@ void init_regex();
 void init_wp_pool();
 word_t expr(char *e, bool *success);
 
+typedef struct watchpoint {
+  int NO;
+  struct watchpoint *next;
+
+  /* TODO: Add more members if necessary */
+  char expr[32*32];
+  word_t result;
+} WP;
+WP* new_wp(char* expr);
+void free_wp(int no);
+void display_wp();
+
 /* We use the `readline' library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
   static char *line_read = NULL;
@@ -69,7 +81,7 @@ static int cmd_si(char *args) {
 static int cmd_info(char *args) {
   if (!args) {Log("r: 打印寄存器状态, w: 打印监视点信息"); return 1;}
   if (args[0] == 'r') {isa_reg_display();}
-  if (args[0] == 'w') {}
+  if (args[0] == 'w') {display_wp();}
   return 0;
 }
 
@@ -88,7 +100,23 @@ static int cmd_x(char *args) {
 static int cmd_p(char *args) {
   if (!args) {Log("p EXPR 求出表达式EXPR的值"); return 1;}
   bool success;
-  printf("%d\n", expr(args, &success));
+  word_t result = expr(args, &success);
+  if (success) {printf("%d\n", result);}
+  else {printf("计算失败\n");}
+  return 0;
+}
+
+static int cmd_w(char *args) {
+  if (!args) {Log("w EXPR 当表达式EXPR的值发生变化时, 暂停程序执行"); return 1;}
+  WP* wp = new_wp(args);
+  printf("watch point NO.%d\n", wp->NO);
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  if (!args) {Log("d N 删除序号为N的监视点"); return 1;}
+  int n = atoi(args);
+  free_wp(n);
   return 0;
 }
 
@@ -106,6 +134,8 @@ static struct {
   {"info", "r: 打印寄存器状态 w: 打印监视点信息", cmd_info},
   {"x", "求出表达式EXPR的值, 将结果作为起始内存地址, 以十六进制形式输出连续的N个4字节", cmd_x},
   {"p", "求出表达式EXPR的值", cmd_p},
+  {"w", "当表达式EXPR的值发生变化时, 暂停程序执行", cmd_w},
+  {"d", "删除序号为N的监视点", cmd_d},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
