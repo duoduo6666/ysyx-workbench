@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include <isa.h>
+#include <memory/paddr.h>
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
@@ -24,7 +25,7 @@ enum {
   TK_NOTYPE = 256, TK_EQ,
 
   /* TODO: Add more token types */
-  TK_DEC, TK_OPCODE
+  TK_DEC, TK_OPCODE, TK_HEX, TK_REG
 };
 
 static struct rule {
@@ -35,6 +36,8 @@ static struct rule {
   /* TODO: Add more rules.
    * Pay attention to the precedence level of different rules.
    */
+  {"0x[0-9abcdef]+", TK_HEX},
+  {"[$].+", TK_REG},
   {"[0-9]+", TK_DEC},
   {" +", TK_NOTYPE},    // spaces
   {"\\+", TK_OPCODE},         // plus
@@ -44,6 +47,8 @@ static struct rule {
   {"\\(", '('},         // *
   {"\\)", ')'},         // /
   {"==", TK_EQ},        // equal
+  {"!=", TK_EQ},        
+  {"&&", TK_OPCODE},        
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -152,41 +157,88 @@ bool check_parentheses(int p, int q) {
 }
 
 word_t eval(int p, int q) {
+  int ptr = 0;
+  bool success;
   Assert(p <= q, "p > q");
   if (p == q) {
-    Assert(tokens[p].type == TK_DEC, "error!");
-    return atoi(tokens[p].str);
+    word_t n = 0;
+    switch (tokens[p].type){
+      case TK_DEC:
+        n = atoi(tokens[p].str);
+        break;
+      case TK_HEX:
+        sscanf(tokens[p].str+2, "%x", &n);
+        break;
+      case TK_REG:
+        n = isa_reg_str2val(tokens[p].str+1, &success);
+        if (!success) {Log("读取寄存器失败");}
+        break;
+      default:
+        Assert(0, "未知Token类型");
+    }
+    return n;
   }
-  else if ((q-p == 1) & ((tokens[p].str[0] == '-'))) {
-    Assert(tokens[p+1].type == TK_DEC, "error!");
-    return -atoi(tokens[p+1].str);
+  // 负数
+  else if (tokens[p].str[0] == '-' && (tokens[p+1].type == '(' && tokens[q].type == ')')) {
+    return -eval(p+1, q);
+  }
+  else if (tokens[p].str[0] == '-' && q - p == 1) {
+    return -eval(p+1, p+1);
+  }
+  else if (tokens[p].str[0] == '*' && (tokens[p+1].type == '(' && tokens[q].type == ')')) {
+    ptr = eval(p+1, q);
+    goto ptr_jump;
+  }
+  else if (tokens[p].str[0] == '*' && q - p == 1) {
+    ptr = eval(p+1, p+1);
+    ptr_jump:
+    if ((PMEM_LEFT > ptr) | (ptr+4-1 > PMEM_RIGHT)) {Log("内存地址应在 0x%x-0x%x 之间", PMEM_LEFT, PMEM_RIGHT-4); return 0;}
+    return paddr_read(ptr, 4);
   }
   else if (check_parentheses(p, q) == true){
     return eval(p + 1, q - 1);
   }
   else{
     int op = 0;
+    int priority = 256;
     // 寻找主运算符
-    for (int i = p; tokens[i].type != 0; i++){
+    for (int i = p; i < q; i++){
       // 跳过 '()'
       if (tokens[i].type == '(') {
         for (; tokens[i].type != ')'; i++) {Assert(i < 32, "表达式不合法");}
       }
       Assert(i < 32, "表达式不合法");
-      if (tokens[i].type == TK_OPCODE){
+      if (tokens[i].type == TK_OPCODE || tokens[i].type == TK_EQ){
         if (tokens[i].str[0] == '+') {
-          op = i;
-          break;
+          if (priority > 10) {priority = 10; op = i;}
+          continue;
         }
         else if ((tokens[i].str[0] == '-')) {
+          // 如果这个减号在第一个token或者他的上一个token也是运算符就判定为负号
+          if ((i == 0) | (tokens[i-1].type == TK_OPCODE)) {
+            // 跳过这个负号
+            continue;
+          }
+          if (priority > 10) {priority = 10; op = i;}
+          continue;
+        }
+        else if (tokens[i].str[0] == '*') {
           if ((i == 0) | (tokens[i-1].type == TK_OPCODE)) {
             continue;
           }
-          op = i;
-          break;
+          if (priority > 11) {priority = 11; op = i;}
+          continue;
         }
-        else if ((tokens[i].str[0] == '*') | (tokens[i].str[0] == '/')){
-          op = i;
+        else if (tokens[i].str[0] == '/') {
+          if (priority > 11) {priority = 11; op = i;}
+          continue;
+        }
+        else if (tokens[i].str[0] == '=' || tokens[i].str[0] == '!') {
+          if (priority > 9) {priority = 9; op = i;}
+          continue;
+        }
+        else if (tokens[i].str[0] == '&') {
+          if (priority > 8) {priority = 8; op = i;}
           continue;
         }
         else {
@@ -210,6 +262,15 @@ word_t eval(int p, int q) {
     case '/':
       if (val2 == 0) {Assert(0, "除数为0");}
       return val1 / val2;
+      break;
+    case '&':
+      return val1 && val2;
+      break;
+    case '=':
+      return val1 == val2;
+      break;
+    case '!':
+      return val1 != val2;
       break;
     
     default:
