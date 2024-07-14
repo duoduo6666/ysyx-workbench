@@ -295,8 +295,8 @@ word_t expr(char *e, bool *success) {
 
   int q;
   for (q=31; tokens[q].type == 0; q--){
-    Assert(q >= 0, "空表达式");
+    Assert(q > 0, "空表达式");
   }
-
+  *success = true;
   return eval(0, q);
 }
