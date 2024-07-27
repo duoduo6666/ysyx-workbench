@@ -19,6 +19,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include <utils.h>
 
 #include <stdlib.h>
 
@@ -65,6 +66,7 @@ static int cmd_c(char *args) {
 
 
 static int cmd_q(char *args) {
+  set_nemu_state(NEMU_QUIT, isa_reg_pc(), 0);
   return -1;
 }
 
