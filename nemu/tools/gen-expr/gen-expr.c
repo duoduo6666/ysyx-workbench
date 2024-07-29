@@ -19,20 +19,79 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 // this should be enough
 static char buf[65536] = {};
 static char code_buf[65536 + 128] = {}; // a little larger than `buf`
 static char *code_format =
 "#include <stdio.h>\n"
+"#include <stdint.h>\n"
 "int main() { "
 "  unsigned result = %s; "
 "  printf(\"%%u\", result); "
 "  return 0; "
 "}";
 
-static void gen_rand_expr() {
-  buf[0] = '\0';
+ char* gen_rand_expr(char* start, int max_token_num) {
+
+  int token_num = 1;
+  char* buf_ptr = start;
+  bool bracket = false;
+
+  // 是否生成负数                              gcc不能计算1--1
+  if (max_token_num == 2 && rand() % 2 && *(start-1) != '-') {
+    *start = '-';
+    start++;
+    token_num++;
+  }
+  // 是否生成括号
+  if (max_token_num >= 3 && rand() % 2) {
+    bracket = true;
+    *buf_ptr = '(';
+    buf_ptr++;
+    token_num += 2;
+  }
+  if (max_token_num-token_num <= 2 || (max_token_num <= 5 && bracket)) {
+    start += sprintf(start, "%d", rand());
+    return start;
+  }
+  assert(max_token_num-token_num >= 3);
+  int expr0_max_token_num = rand() % (max_token_num-token_num-1);
+  if (expr0_max_token_num == 0) {
+    expr0_max_token_num = 1;
+  }
+  int expr1_max_token_num = max_token_num-token_num-expr0_max_token_num;
+  // printf("token %d e0 %d e1 %d\n", token_num, expr0_max_token_num, expr1_max_token_num);
+  buf_ptr = gen_rand_expr(buf_ptr, expr0_max_token_num);
+
+  switch (rand() % 4) {
+    case 0:
+      *buf_ptr = '+';
+      break;
+    case 1:
+      *buf_ptr = '-';
+      break;
+    case 2:
+      *buf_ptr = '*';
+      break;
+    case 3:
+      *buf_ptr = '/';
+      break;
+    default:
+      assert("Error");
+  }
+  buf_ptr++;
+
+  buf_ptr = gen_rand_expr(buf_ptr, expr1_max_token_num);
+  
+  if (bracket) {
+    *buf_ptr = ')';
+    buf_ptr++;
+  }
+  
+  *buf_ptr = '\0';
+  return buf_ptr;
 }
 
 int main(int argc, char *argv[]) {
@@ -42,9 +101,12 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     sscanf(argv[1], "%d", &loop);
   }
-  int i;
-  for (i = 0; i < loop; i ++) {
-    gen_rand_expr();
+  int i = 0;
+  
+  FILE *input = fopen("input", "w");
+  assert(input != NULL);
+  while (i < loop) {
+    gen_rand_expr(buf, 32);
 
     sprintf(code_buf, code_format, buf);
 
@@ -53,7 +115,8 @@ int main(int argc, char *argv[]) {
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret = system("gcc /tmp/.code.c -o /tmp/.expr");
+    int ret = system("gcc -Wno-overflow -Wall -Werror -W /tmp/.code.c -o /tmp/.expr > /dev/null 2>&1");
+    // int ret = system("gcc  -Wall -Werror -W /tmp/.code.c -o /tmp/.expr > /dev/null 2>&1");
     if (ret != 0) continue;
 
     fp = popen("/tmp/.expr", "r");
@@ -63,7 +126,12 @@ int main(int argc, char *argv[]) {
     ret = fscanf(fp, "%d", &result);
     pclose(fp);
 
-    printf("%u %s\n", result, buf);
+    fprintf(input, "%u %s\n", result, buf);
+    i++;
+    printf("\r%d/%d", i, loop);
+    fflush(stdout);
   }
+  fclose(input);
+  printf("\n");
   return 0;
 }

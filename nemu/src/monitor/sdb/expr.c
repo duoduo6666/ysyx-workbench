@@ -103,8 +103,14 @@ static bool make_token(char *e) {
          * to record the token in the array `tokens'. For certain types
          * of tokens, some extra actions should be performed.
          */
-        Assert(substr_len < 32, "token过大");
-        Assert(nr_token <= 32, "token数量过多");
+        if (substr_len >= 32) {
+          Log("token过大");
+          return false;
+        }
+        if (nr_token >= 32) {
+          Log("token数量过多");
+          return false;
+        }
         switch (rules[i].token_type) {
           case TK_NOTYPE:
             break;
@@ -156,10 +162,14 @@ bool check_parentheses(int p, int q) {
   return false;
 }
 
-word_t eval(int p, int q) {
+word_t eval(int p, int q, bool *success) {
   int ptr = 0;
-  bool success;
-  Assert(p <= q, "p > q");
+  if (p > q) {
+    Log("p > q");
+    *success = false;
+    return 0;
+  }
+
   if (p == q) {
     word_t n = 0;
     switch (tokens[p].type){
@@ -170,8 +180,8 @@ word_t eval(int p, int q) {
         sscanf(tokens[p].str+2, "%x", &n);
         break;
       case TK_REG:
-        n = isa_reg_str2val(tokens[p].str+1, &success);
-        if (!success) {Log("读取寄存器失败");}
+        n = isa_reg_str2val(tokens[p].str+1, success);
+        if (!success) {Log("读取寄存器失败"); return 0;}
         break;
       default:
         Assert(0, "未知Token类型");
@@ -180,23 +190,23 @@ word_t eval(int p, int q) {
   }
   // 负数
   else if (tokens[p].str[0] == '-' && (tokens[p+1].type == '(' && tokens[q].type == ')')) {
-    return -eval(p+1, q);
+    return -eval(p+1, q, success);
   }
   else if (tokens[p].str[0] == '-' && q - p == 1) {
-    return -eval(p+1, p+1);
+    return -eval(p+1, p+1, success);
   }
   else if (tokens[p].str[0] == '*' && (tokens[p+1].type == '(' && tokens[q].type == ')')) {
-    ptr = eval(p+1, q);
+    ptr = eval(p+1, q, success);
     goto ptr_jump;
   }
   else if (tokens[p].str[0] == '*' && q - p == 1) {
-    ptr = eval(p+1, p+1);
+    ptr = eval(p+1, p+1, success);
     ptr_jump:
     if ((PMEM_LEFT > ptr) | (ptr+4-1 > PMEM_RIGHT)) {Log("内存地址应在 0x%x-0x%x 之间", PMEM_LEFT, PMEM_RIGHT-4); return 0;}
     return paddr_read(ptr, 4);
   }
   else if (check_parentheses(p, q) == true){
-    return eval(p + 1, q - 1);
+    return eval(p + 1, q - 1, success);
   }
   else{
     int op = 0;
@@ -205,40 +215,50 @@ word_t eval(int p, int q) {
     for (int i = p; i < q; i++){
       // 跳过 '()'
       if (tokens[i].type == '(') {
-        for (; tokens[i].type != ')'; i++) {Assert(i < 32, "表达式不合法");}
+        int t = i;
+        for (; check_parentheses(t, i) == false; i++) {
+          if (i >= 32) {
+            *success = false;
+            Log("表达式不合法");
+            return 0;
+          }
+        }
       }
-      Assert(i < 32, "表达式不合法");
+      if (i >= 32) {
+        break;
+      }
+
       if (tokens[i].type == TK_OPCODE || tokens[i].type == TK_EQ){
         if (tokens[i].str[0] == '+') {
-          if (priority > 10) {priority = 10; op = i;}
+          if (priority >= 10) {priority = 10; op = i;}
           continue;
         }
         else if ((tokens[i].str[0] == '-')) {
           // 如果这个减号在第一个token或者他的上一个token也是运算符就判定为负号
-          if ((i == 0) | (tokens[i-1].type == TK_OPCODE)) {
+          if ((i == p) | (tokens[i-1].type == TK_OPCODE || tokens[i-1].type == '(')) {
             // 跳过这个负号
             continue;
           }
-          if (priority > 10) {priority = 10; op = i;}
+          if (priority >= 10) {priority = 10; op = i;}
           continue;
         }
         else if (tokens[i].str[0] == '*') {
-          if ((i == 0) | (tokens[i-1].type == TK_OPCODE)) {
+          if ((i == p) | (tokens[i-1].type == TK_OPCODE || tokens[i-1].type == '(')) {
             continue;
           }
-          if (priority > 11) {priority = 11; op = i;}
+          if (priority >= 11) {priority = 11; op = i;}
           continue;
         }
         else if (tokens[i].str[0] == '/') {
-          if (priority > 11) {priority = 11; op = i;}
+          if (priority >= 11) {priority = 11; op = i;}
           continue;
         }
         else if (tokens[i].str[0] == '=' || tokens[i].str[0] == '!') {
-          if (priority > 9) {priority = 9; op = i;}
+          if (priority >= 9) {priority = 9; op = i;}
           continue;
         }
         else if (tokens[i].str[0] == '&') {
-          if (priority > 8) {priority = 8; op = i;}
+          if (priority >= 8) {priority = 8; op = i;}
           continue;
         }
         else {
@@ -247,8 +267,9 @@ word_t eval(int p, int q) {
       }
     }
 
-    int val1 = eval(p, op - 1);
-    int val2 = eval(op + 1, q);
+    int val1 = eval(p, op - 1, success);
+    int val2 = eval(op + 1, q, success);
+    // printf("v1 %u v2 %u op %d\n", val1, val2, op);
     switch (tokens[op].str[0]){
     case '+':
       return val1 + val2;
@@ -298,5 +319,5 @@ word_t expr(char *e, bool *success) {
     Assert(q > 0, "空表达式");
   }
   *success = true;
-  return eval(0, q);
+  return eval(0, q, success);
 }

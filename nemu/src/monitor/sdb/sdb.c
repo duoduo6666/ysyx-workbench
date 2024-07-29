@@ -103,7 +103,7 @@ static int cmd_p(char *args) {
   if (!args) {Log("p EXPR 求出表达式EXPR的值"); return 1;}
   bool success;
   word_t result = expr(args, &success);
-  if (success) {printf("%d\n", result);}
+  if (success) {printf("%u\n", result);}
   else {printf("计算失败\n");}
   return 0;
 }
@@ -119,6 +119,26 @@ static int cmd_d(char *args) {
   if (!args) {Log("d N 删除序号为N的监视点"); return 1;}
   int n = atoi(args);
   free_wp(n);
+  return 0;
+}
+
+static int cmd_test_expr(char *args) {
+  if (!args) {Log("test_expr filename"); return 1;}
+
+  bool success;
+  static char buf[65536] = {};
+  word_t result;
+
+  FILE *fp = fopen(args, "r");
+
+  while (fscanf(fp, "%u %s", &result, buf) == 2) {
+    if (expr(buf, &success) != result || success == false){
+      printf("表达式计算错误：%u, %s\n", result, buf);
+      break;
+    }
+    printf("pass %u, %s\n", result, buf);
+  }
+  fclose(fp);
   return 0;
 }
 
@@ -138,6 +158,7 @@ static struct {
   {"p", "求出表达式EXPR的值", cmd_p},
   {"w", "当表达式EXPR的值发生变化时, 暂停程序执行", cmd_w},
   {"d", "删除序号为N的监视点", cmd_d},
+  {"test_expr", "使用gen_expr生成的文件测试expr功能", cmd_test_expr},
 };
 
 #define NR_CMD ARRLEN(cmd_table)
