@@ -21,6 +21,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define max_space 4
+#define max_token 32
+
 // this should be enough
 static char buf[65536] = {};
 static char code_buf[65536 + 128] = {}; // a little larger than `buf`
@@ -33,17 +36,29 @@ static char *code_format =
 "  return 0; "
 "}";
 
+char* gen_rand_space(char* start, int max) {
+  if (max == 0) {
+    return start;
+  }
+  int n = rand() % max;
+  for (int i = 0; i < n; i++) {
+    start[i] = ' ';
+  }
+  return start+n;
+}
+
  char* gen_rand_expr(char* start, int max_token_num) {
 
   int token_num = 1;
   char* buf_ptr = start;
   bool bracket = false;
-
+  buf_ptr = gen_rand_space(buf_ptr, max_space);
   // 是否生成负数                              gcc不能计算1--1
-  if (max_token_num == 2 && rand() % 2 && *(start-1) != '-') {
-    *start = '-';
-    start++;
+  if (max_token_num == 2 && rand() % 2 && *(buf_ptr-1) != '-') {
+    *buf_ptr = '-';
+    buf_ptr++;
     token_num++;
+    buf_ptr = gen_rand_space(buf_ptr, max_space);
   }
   // 是否生成括号
   if (max_token_num >= 3 && rand() % 2) {
@@ -51,10 +66,12 @@ static char *code_format =
     *buf_ptr = '(';
     buf_ptr++;
     token_num += 2;
+    buf_ptr = gen_rand_space(buf_ptr, max_space);
   }
   if (max_token_num-token_num <= 2 || (max_token_num <= 5 && bracket)) {
-    start += sprintf(start, "%d", rand());
-    return start;
+    buf_ptr += sprintf(buf_ptr, "%d", rand());
+    buf_ptr = gen_rand_space(buf_ptr, max_space);
+    return buf_ptr;
   }
   assert(max_token_num-token_num >= 3);
   int expr0_max_token_num = rand() % (max_token_num-token_num-1);
@@ -64,6 +81,7 @@ static char *code_format =
   int expr1_max_token_num = max_token_num-token_num-expr0_max_token_num;
   // printf("token %d e0 %d e1 %d\n", token_num, expr0_max_token_num, expr1_max_token_num);
   buf_ptr = gen_rand_expr(buf_ptr, expr0_max_token_num);
+  buf_ptr = gen_rand_space(buf_ptr, max_space);
 
   switch (rand() % 4) {
     case 0:
@@ -84,6 +102,7 @@ static char *code_format =
   buf_ptr++;
 
   buf_ptr = gen_rand_expr(buf_ptr, expr1_max_token_num);
+  buf_ptr = gen_rand_space(buf_ptr, max_space);
   
   if (bracket) {
     *buf_ptr = ')';
@@ -106,7 +125,7 @@ int main(int argc, char *argv[]) {
   FILE *input = fopen("input", "w");
   assert(input != NULL);
   while (i < loop) {
-    gen_rand_expr(buf, 32);
+    gen_rand_expr(buf, max_token);
 
     sprintf(code_buf, code_format, buf);
 
