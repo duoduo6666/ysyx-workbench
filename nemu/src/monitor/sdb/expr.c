@@ -184,7 +184,9 @@ word_t eval(int p, int q, bool *success) {
         if (!success) {Log("读取寄存器失败"); return 0;}
         break;
       default:
-        Assert(0, "未知Token类型");
+        Log("未知Token类型");
+        *success = false;
+        return 0;
     }
     return n;
   }

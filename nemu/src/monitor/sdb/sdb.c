@@ -131,7 +131,7 @@ static int cmd_test_expr(char *args) {
 
   FILE *fp = fopen(args, "r");
 
-  while (fscanf(fp, "%u %s", &result, buf) == 2) {
+  while (fscanf(fp, "%u %[^\n]", &result, buf) == 2) {
     if (expr(buf, &success) != result || success == false){
       printf("表达式计算错误：%u, %s\n", result, buf);
       break;

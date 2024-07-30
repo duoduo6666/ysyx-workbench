@@ -71,7 +71,7 @@ char* gen_rand_space(char* start, int max) {
   if (max_token_num-token_num <= 2 || (max_token_num <= 5 && bracket)) {
     buf_ptr += sprintf(buf_ptr, "%d", rand());
     buf_ptr = gen_rand_space(buf_ptr, max_space);
-    return buf_ptr;
+    goto ret;
   }
   assert(max_token_num-token_num >= 3);
   int expr0_max_token_num = rand() % (max_token_num-token_num-1);
@@ -104,6 +104,7 @@ char* gen_rand_space(char* start, int max) {
   buf_ptr = gen_rand_expr(buf_ptr, expr1_max_token_num);
   buf_ptr = gen_rand_space(buf_ptr, max_space);
   
+  ret:
   if (bracket) {
     *buf_ptr = ')';
     buf_ptr++;
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]) {
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret = system("gcc -Wno-overflow -Wall -Werror -W /tmp/.code.c -o /tmp/.expr > /dev/null 2>&1");
+    int ret = system("gcc -Wno-overflow -Wall -Werror /tmp/.code.c -o /tmp/.expr 2>/dev/null");
     // int ret = system("gcc  -Wall -Werror -W /tmp/.code.c -o /tmp/.expr > /dev/null 2>&1");
     if (ret != 0) continue;
 
