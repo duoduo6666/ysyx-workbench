@@ -54,21 +54,21 @@ char* gen_rand_space(char* start, int max) {
   bool bracket = false;
   buf_ptr = gen_rand_space(buf_ptr, max_space);
   // 是否生成负数                              gcc不能计算1--1
-  if (max_token_num == 2 && rand() % 2 && *(buf_ptr-1) != '-') {
+  if (max_token_num == 2 && rand() % 2 && *(start-1) != '-') {
     *buf_ptr = '-';
     buf_ptr++;
     token_num++;
     buf_ptr = gen_rand_space(buf_ptr, max_space);
   }
   // 是否生成括号
-  if (max_token_num >= 3 && rand() % 2) {
+  if (max_token_num-token_num >= 3 && rand() % 2) {
     bracket = true;
     *buf_ptr = '(';
     buf_ptr++;
     token_num += 2;
     buf_ptr = gen_rand_space(buf_ptr, max_space);
   }
-  if (max_token_num-token_num <= 2 || (max_token_num <= 5 && bracket)) {
+  if (max_token_num-token_num <= 2 || !(rand() % 4) || (max_token_num <= 5 && bracket)) {
     buf_ptr += sprintf(buf_ptr, "%d", rand());
     buf_ptr = gen_rand_space(buf_ptr, max_space);
     goto ret;
