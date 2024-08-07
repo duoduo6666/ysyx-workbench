@@ -64,6 +64,7 @@ bool check_wp() {
   bool success;
   for (WP *wp = head; wp != NULL; wp = wp->next) {
     if (expr(wp->expr, &success) != wp->result) {
+      wp->result = expr(wp->expr, &success);
       Log("触发监视点No.%d %s", wp->NO, wp->expr);
       return true;
     }
