@@ -56,16 +56,28 @@ assign need_rd = (
 assign rfwe = rd_decode & {ysyx_24070017_RF_REG_NUM{need_rd}}
 
 wire [ysyx_24070017_RF_REG_NUM * ysyx_24070017_WORD_LENGTH - 1:0] rf_data;
-wire [ysyx_24070017_WORD_TYPE] rd_data, rs1_data, rs2_data;
+wire [ysyx_24070017_WORD_TYPE] write_data, rs1_data, rs2_data;
 ysyx_24070017_RF rf(
 	.clk(clk),
 	.rst(rst),
 	.we(rfwe)
-	.wdata({ysyx_24070017_RF_REG_NUM{rd_data}}),
+	.wdata({ysyx_24070017_RF_REG_NUM{write_data}}),
 	.rdata(rf_data),
 )
 assign rs1_data = rf_data[(rs1+1)*ysyx_24070017_WORD_TYPE-1:rs1*ysyx_24070017_WORD_TYPE];
 assign rs2_data = rf_data[(rs2+1)*ysyx_24070017_WORD_TYPE-1:rs2*ysyx_24070017_WORD_TYPE];
 
+wire is_op_imm;
+assign is_op_imm = opcode == 7'b0010011;
+wire [ysyx_24070017_WORD_TYPE] result;
+ysyx_2070017_ALU alu(
+	.opcode(opcode),
+	.funct3(funct3),
+	.funct7(funct7),
+	.src1(rs1_data),
+	.src2((rs2_data&{ysyx_24070017_WORD_LENGTH{!is_op_imm}}) | (immI&{ysyx_24070017_WORD_LENGTH{is_op_imm}}))
+	.result(result),
+)
+assign write_data = result;
 
 endmodule
