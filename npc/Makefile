@@ -1,5 +1,5 @@
 VERILATOR = verilator
-VERILATOR_CFLAGS += -cc --trace-fst --exe --build -Mdir build -O3 -Wall -j 1 # -MMD --x-assign fast --x-initial fast --noassert
+VERILATOR_CFLAGS += -cc --trace-fst --exe --build -Mdir build -O3 -Wall -j 1 --Wno-declfilename --Wno-unusedsignal # -MMD --x-assign fast --x-initial fast --noassert
 
 BUILD_DIR = ./build
 
@@ -16,6 +16,10 @@ all:
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by your self."
+	$(VERILATOR) $(VERILATOR_CFLAGS) \
+		--top-module ysyx_2070017_CPU -o cpu \
+	        csrc/main.cpp vsrc/defines.v vsrc/CPU.v vsrc/IDU.v vsrc/ALU.v vsrc/RF.v vsrc/Mux.v vsrc/Reg.v
+	build/cpu +trace
 
 light:
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/light.nxdc $(BUILD_DIR)/light_auto_bind.cpp

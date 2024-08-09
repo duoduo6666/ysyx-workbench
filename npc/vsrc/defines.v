@@ -1,3 +1,8 @@
+`ifndef ysyx_24070017_DEFINES
+`define ysyx_24070017_DEFINES
+
 `define ysyx_24070017_WORD_LENGTH 32
-`define ysyx_24070017_WORD_TYPE ysyx_24070017_WORD_LENGTH-1:0
+`define ysyx_24070017_WORD_TYPE `ysyx_24070017_WORD_LENGTH-1:0
 `define ysyx_24070017_RF_REG_NUM 32
+
+`endif
