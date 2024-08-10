@@ -43,17 +43,17 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
   if (check_wp()) {nemu_state.state = NEMU_STOP;}
 }
 
-static void exec_once(Decode *s, vaddr_t pc) {
-  s->pc = pc;
-  s->snpc = pc;
-  isa_exec_once(s);
-  cpu.pc = s->dnpc;
-#ifdef CONFIG_ITRACE
-  char *p = s->logbuf;
-  p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc);
-  int ilen = s->snpc - s->pc;
+
+// iringbuf
+static word_t iringbuf[MAX_INST_TO_PRINT] = {0};
+static int iringbuf_end = 0;
+
+void itrace(char *buf, size_t buf_len, word_t pc, uint32_t inst_val, int inst_len) {
+  char *p = buf;
+  p += snprintf(p, buf_len, FMT_WORD ":", pc);
+  int ilen = inst_len;
   int i;
-  uint8_t *inst = (uint8_t *)&s->isa.inst.val;
+  uint8_t *inst = (uint8_t *)&inst_val;
   for (i = ilen - 1; i >= 0; i --) {
     p += snprintf(p, 4, " %02x", inst[i]);
   }
@@ -64,13 +64,26 @@ static void exec_once(Decode *s, vaddr_t pc) {
   memset(p, ' ', space_len);
   p += space_len;
 
-#ifndef CONFIG_ISA_loongarch32r
-  void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
-  disassemble(p, s->logbuf + sizeof(s->logbuf) - p,
-      MUXDEF(CONFIG_ISA_x86, s->snpc, s->pc), (uint8_t *)&s->isa.inst.val, ilen);
-#else
-  p[0] = '\0'; // the upstream llvm does not support loongarch32r
-#endif
+  #ifndef CONFIG_ISA_loongarch32r
+    void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
+    disassemble(p, buf + buf_len - p,
+        MUXDEF(CONFIG_ISA_x86, s->snpc, pc), (uint8_t *)&inst_val, ilen);
+  #else
+    p[0] = '\0'; // the upstream llvm does not support loongarch32r
+  #endif
+}
+
+static void exec_once(Decode *s, vaddr_t pc) {
+  s->pc = pc;
+  s->snpc = pc;
+  isa_exec_once(s);
+  cpu.pc = s->dnpc;
+#ifdef CONFIG_ITRACE
+  itrace(s->logbuf, sizeof(s->logbuf), pc, s->isa.inst.val, s->snpc - s->pc);
+
+  // iringbuf
+  iringbuf[iringbuf_end] = pc;
+  iringbuf_end = (iringbuf_end+1) % MAX_INST_TO_PRINT;
 #endif
 }
 
@@ -94,8 +107,49 @@ static void statistic() {
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
 }
 
+word_t vaddr_ifetch(vaddr_t addr, int len);
+void iringbuf_inst_output(word_t pc, bool is_end) {
+  char buf[128];
+  itrace(buf+3, sizeof(buf)-3, pc, vaddr_ifetch(pc, 4), 4);
+  if (is_end) {
+    buf[0] = '-'; buf[1] = '-'; buf[2] = '>';
+  } else {
+    buf[0] = ' '; buf[1] = ' '; buf[2] = ' ';
+  }
+#ifdef CONFIG_ITRACE_COND
+  if (ITRACE_COND) { log_write("%s\n", buf); }
+#endif
+  puts(buf);
+}
+
+void iringbuf_display() {
+#ifdef CONFIG_ITRACE_COND
+  if (ITRACE_COND) { log_write("iringbuf"); }
+#endif
+  puts("iringbuf: ");
+  if (iringbuf[(iringbuf_end+1) % MAX_INST_TO_PRINT] == 0){
+    for (int i = 0; i < iringbuf_end-1; i++) {
+      iringbuf_inst_output(iringbuf[i], false);
+    }
+    iringbuf_inst_output(iringbuf[iringbuf_end-1], true);
+  } else {
+    for (int i = iringbuf_end; i < MAX_INST_TO_PRINT; i++) {
+      iringbuf_inst_output(iringbuf[i], false);
+    }
+    for (int i = 0; i < iringbuf_end-1; i++) {
+      iringbuf_inst_output(iringbuf[i], false);
+    }
+    iringbuf_inst_output(iringbuf[iringbuf_end-1], true);
+  }
+}
+
 void assert_fail_msg() {
   isa_reg_display();
+#ifdef CONFIG_ITRACE
+#ifdef CONFIG_ISA_riscv
+  iringbuf_display();
+#endif
+#endif
   statistic();
 }
 
