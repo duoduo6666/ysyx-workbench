@@ -108,7 +108,14 @@ void init_monitor(int argc, char *argv[]) {
   init_rand();
 
   /* Open the log file. */
+  char *default_log_file = "./nemu.log";
+  if (log_file == NULL) {
+    log_file = default_log_file;
+  }
   init_log(log_file);
+  if (strcmp(log_file, default_log_file) == 0) {
+    Log("Use default log file: %s", log_file);
+  }
 
   /* Initialize memory. */
   init_mem();
@@ -123,6 +130,13 @@ void init_monitor(int argc, char *argv[]) {
   long img_size = load_img();
 
   /* Initialize differential testing. */
+  if (diff_so_file == NULL) {
+    char default_diff_so_file[256] = {0};
+    strcat(default_diff_so_file, getenv("NEMU_HOME"));
+    strcat(default_diff_so_file, "/tools/spike-diff/build/riscv32-spike-so");
+    diff_so_file = default_diff_so_file;
+    Log("Use default diff so file: %s", default_diff_so_file);
+  }
   init_difftest(diff_so_file, img_size, difftest_port);
 
   /* Initialize the simple debugger. */
