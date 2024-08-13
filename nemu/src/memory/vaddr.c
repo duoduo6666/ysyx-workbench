@@ -21,9 +21,17 @@ word_t vaddr_ifetch(vaddr_t addr, int len) {
 }
 
 word_t vaddr_read(vaddr_t addr, int len) {
+#ifdef CONFIG_ITRACE_COND
+  if (ITRACE_COND) { log_write("mtrace read 0x%x: 0x%x\n", addr, paddr_read(addr, len)); }
+#endif
+  IFDEF(CONFIG_MTRACE, printf("mtrace read 0x%x: 0x%x\n", addr, paddr_read(addr, len)));
   return paddr_read(addr, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, word_t data) {
+#ifdef CONFIG_ITRACE_COND
+  if (ITRACE_COND) { log_write("mtrace write 0x%x: 0x%x\n", addr, data); }
+#endif
+  IFDEF(CONFIG_MTRACE, printf("mtrace write 0x%x: 0x%x\n", addr, data));
   paddr_write(addr, len, data);
 }
