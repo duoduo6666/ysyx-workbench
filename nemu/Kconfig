@@ -156,6 +156,16 @@ config MTRACE
   bool "Enable memory tracer"
   default n
 
+config FTRACE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable funtion tracer"
+  default n
+
+config FTRACE_STACK_SIZE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER && FTRACE
+  int "memory tracer's stack size"
+  default 256
+
 config DIFFTEST
   depends on TARGET_NATIVE_ELF
   bool "Enable differential testing"

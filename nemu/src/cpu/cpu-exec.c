@@ -17,6 +17,7 @@
 #include <cpu/decode.h>
 #include <cpu/difftest.h>
 #include <locale.h>
+#include <elf.h>
 
 /* The assembly code of instructions executed is only output to the screen
  * when the number of instructions executed is less than this value.
@@ -71,6 +72,116 @@ void itrace(char *buf, size_t buf_len, word_t pc, uint32_t inst_val, int inst_le
   #else
     p[0] = '\0'; // the upstream llvm does not support loongarch32r
   #endif
+}
+
+
+Elf32_Sym* symbols;
+int symbol_num;
+char* strtab;
+int ftrace_deep = 0;
+#ifdef CONFIG_FTRACE
+char* ftrace_stack[CONFIG_FTRACE_STACK_SIZE] = {0};
+#endif
+void init_ftrace(char* elf_file) {
+  
+  assert(elf_file != NULL);
+
+  FILE* fp = fopen(elf_file, "r");
+  assert(fp != NULL);
+
+  Elf32_Ehdr elf;
+  assert(fread(&elf, sizeof(Elf32_Ehdr), 1, fp) == 1);
+
+  assert(fseek(fp, elf.e_shoff, SEEK_SET) == 0);
+  Elf32_Shdr* shdr = malloc(elf.e_shnum * sizeof(Elf32_Shdr));
+  assert(shdr != NULL);
+  assert(fread(shdr, sizeof(Elf32_Shdr), elf.e_shnum, fp) == elf.e_shnum);
+
+  char* shstrtab = NULL;
+  shstrtab = malloc(shdr[elf.e_shstrndx].sh_size);
+  assert(shstrtab != NULL);
+  assert(fseek(fp, shdr[elf.e_shstrndx].sh_offset, SEEK_SET) == 0);
+  assert(fread(shstrtab, sizeof(char), shdr[elf.e_shstrndx].sh_size, fp) == shdr[elf.e_shstrndx].sh_size);
+
+  Elf32_Shdr* symtab_hdr = NULL;
+  strtab = NULL;
+  for (int i = 0; i < elf.e_shnum; i++) {
+    // Log("[%d] Name: %s Type: %x", i, shstrtab + shdr[i].sh_name, shdr[i].sh_type);
+    if (shdr[i].sh_type == SHT_SYMTAB) {
+      symtab_hdr = &shdr[i];
+    }
+    if (strcmp(shstrtab + shdr[i].sh_name, ".strtab") == 0) {
+      strtab = malloc(shdr[i].sh_size);
+      assert(fseek(fp, shdr[i].sh_offset, SEEK_SET) == 0);
+      assert(fread(strtab, sizeof(char), shdr[i].sh_size, fp) == shdr[i].sh_size);
+    }
+  }
+  assert(symtab_hdr != NULL);
+
+  symbol_num = symtab_hdr->sh_size / sizeof(Elf32_Sym);
+  symbols = malloc(symtab_hdr->sh_size);
+  assert(symbols != NULL);
+  assert(fseek(fp, symtab_hdr->sh_offset, SEEK_SET) == 0);
+  assert(fread(symbols, sizeof(char), symtab_hdr->sh_size, fp) == symtab_hdr->sh_size);
+  for (int i = 0; i < symbol_num; i++) {
+    if (ELF32_ST_TYPE(symbols[i].st_info) == STT_FUNC) {
+      Log("[%d] Name %s Value 0x%x Size 0x%x", i, strtab + symbols[i].st_name, symbols[i].st_value, symbols[i].st_size);
+    }
+  }
+
+  fclose(fp);
+}
+
+int ftrace_pc_in_func(vaddr_t pc) {
+  for (int i = 0; i < symbol_num; i++) {
+    if (pc > symbols[i].st_value && pc < symbols[i].st_value + symbols[i].st_size){
+      return i;
+    }
+  }
+  return -1;
+}
+
+void ftrace_print_deep() {
+  for (int i = 0; i < ftrace_deep; i++) {
+    printf("  ");
+  }
+}
+
+int ftrace_search_stack(char* func) {
+  for (int i = ftrace_deep - 1; i >= 0; i--) {
+    if (strcmp(ftrace_stack[i], func)) {
+      return i + 1;
+    }
+  }
+  return -1;
+}
+
+void ftrace_check(vaddr_t pc, vaddr_t next_pc) {
+  for (int i = 0; i < symbol_num; i++) {
+    if (ELF32_ST_TYPE(symbols[i].st_info) == STT_FUNC) {
+      if (next_pc == symbols[i].st_value) {
+        printf("0x%x: ", pc);
+        ftrace_print_deep();
+        printf("cell[%s@0x%x]\n", strtab + symbols[i].st_name, symbols[i].st_value);
+        ftrace_stack[ftrace_deep] = strtab + symbols[i].st_name;
+        ftrace_deep++;
+        assert(ftrace_deep < CONFIG_FTRACE_STACK_SIZE);
+        return;
+      }
+    }
+  }
+  for (int i = 0; i < symbol_num; i++) {
+    if (ELF32_ST_TYPE(symbols[i].st_info) == STT_FUNC) {
+      if (ftrace_pc_in_func(pc) == i && (next_pc > symbols[i].st_value + symbols[i].st_size || next_pc < symbols[i].st_value)) {
+        ftrace_deep = ftrace_search_stack(strtab + symbols[i].st_name);
+        assert(ftrace_deep > 0);
+        printf("0x%x: ", pc);
+        ftrace_print_deep();
+        printf("ret[%s@0x%x]\n", strtab + symbols[i].st_name, next_pc);
+        break;
+      }
+    }
+  }
 }
 
 static void exec_once(Decode *s, vaddr_t pc) {

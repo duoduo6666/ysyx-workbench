@@ -44,6 +44,7 @@ void sdb_set_batch_mode();
 static char *log_file = NULL;
 static char *diff_so_file = NULL;
 static char *img_file = NULL;
+static char elf_file[256] = {0};
 static int difftest_port = 1234;
 
 static long load_img() {
@@ -98,6 +99,7 @@ static int parse_args(int argc, char *argv[]) {
   return 0;
 }
 
+void init_ftrace(char* elf_file);
 void init_monitor(int argc, char *argv[]) {
   /* Perform some global initialization. */
 
@@ -138,6 +140,16 @@ void init_monitor(int argc, char *argv[]) {
     Log("Use default diff so file: %s", default_diff_so_file);
   }
   init_difftest(diff_so_file, img_size, difftest_port);
+
+  if (img_file) {
+    int l = strlen(img_file);
+    assert(l < 256); // elf_file is a char[256]
+    assert(strcmp(img_file+l-3, "bin") == 0);
+    
+    strcpy(elf_file, img_file);
+    strcpy(elf_file+l-3, "elf");
+    init_ftrace(elf_file);
+  }
 
   /* Initialize the simple debugger. */
   init_sdb();
