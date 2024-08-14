@@ -44,7 +44,9 @@ void sdb_set_batch_mode();
 static char *log_file = NULL;
 static char *diff_so_file = NULL;
 static char *img_file = NULL;
+#ifdef CONFIG_FTRACE
 static char elf_file[256] = {0};
+#endif
 static int difftest_port = 1234;
 
 static long load_img() {
@@ -141,6 +143,7 @@ void init_monitor(int argc, char *argv[]) {
   }
   init_difftest(diff_so_file, img_size, difftest_port);
 
+#ifdef CONFIG_FTRACE
   if (img_file) {
     int l = strlen(img_file);
     assert(l < 256); // elf_file is a char[256]
@@ -150,7 +153,7 @@ void init_monitor(int argc, char *argv[]) {
     strcpy(elf_file+l-3, "elf");
     init_ftrace(elf_file);
   }
-
+#endif
   /* Initialize the simple debugger. */
   init_sdb();
 

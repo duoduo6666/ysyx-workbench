@@ -74,14 +74,12 @@ void itrace(char *buf, size_t buf_len, word_t pc, uint32_t inst_val, int inst_le
   #endif
 }
 
-
+#ifdef CONFIG_FTRACE
 Elf32_Sym* symbols;
 int symbol_num;
 char* strtab;
 int ftrace_deep = 0;
-#ifdef CONFIG_FTRACE
 char* ftrace_stack[CONFIG_FTRACE_STACK_SIZE] = {0};
-#endif
 void init_ftrace(char* elf_file) {
   
   assert(elf_file != NULL);
@@ -183,6 +181,7 @@ void ftrace_check(vaddr_t pc, vaddr_t next_pc) {
     }
   }
 }
+#endif
 
 static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
