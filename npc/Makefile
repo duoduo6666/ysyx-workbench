@@ -18,14 +18,14 @@ sim:
 	@echo "Write this Makefile by your self."
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		--top-module ysyx_2070017_CPU -o cpu \
-	        csrc/main.cpp \
-			vsrc/ysyx_2070017_defines.v \
-			vsrc/ysyx_2070017_CPU.v \
-			vsrc/ysyx_2070017_IDU.v \
-			vsrc/ysyx_2070017_ALU.v \
-			vsrc/ysyx_2070017_RF.v \
-			vsrc/ysyx_2070017_Mux.v \
-			vsrc/ysyx_2070017_Reg.v
+		csrc/main.cpp \
+		vsrc/ysyx_2070017_defines.v \
+		vsrc/ysyx_2070017_CPU.v \
+		vsrc/ysyx_2070017_IDU.v \
+		vsrc/ysyx_2070017_ALU.v \
+		vsrc/ysyx_2070017_RF.v \
+		vsrc/ysyx_2070017_Mux.v \
+		vsrc/ysyx_2070017_Reg.v
 	build/cpu
 
 include ../Makefile
