@@ -7,6 +7,8 @@ include $(NVBOARD_HOME)/scripts/nvboard.mk
 
 NVBOARD_FLAGS = $(NVBOARD_ARCHIVE) -$(addprefix -CFLAGS -I, $(NVBOARD_USR_INC)) $(addprefix -LDFLAGS , $(LDFLAGS))
 
+IMG = 
+
 $(shell mkdir -p $(BUILD_DIR))
 $(shell mkdir -p $(BUILD_DIR)/labs)
 
@@ -15,7 +17,6 @@ all:
 
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@echo "Write this Makefile by your self."
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		--top-module ysyx_2070017_CPU -o cpu \
 		csrc/main.cpp \
@@ -26,6 +27,6 @@ sim:
 		vsrc/ysyx_2070017_RF.v \
 		vsrc/ysyx_2070017_Mux.v \
 		vsrc/ysyx_2070017_Reg.v
-	build/cpu
+	build/cpu $(IMG)
 
 include ../Makefile
