@@ -30,9 +30,12 @@ int main(int argc, char **argv) {
     contextp->traceEverOn(true);
     contextp->commandArgs(argc, argv);
     top = new Vysyx_2070017_CPU{contextp};
-
-    FILE* fp = fopen(argv[1], "r");
-    if (fp != NULL) {
+    
+    if (argc > 1) {
+        FILE* fp = fopen(argv[1], "r");
+        if (fp == NULL) {
+            printf("Can't read %s file\n", argv[1]);
+        }
         assert(fp != NULL);
         fseek(fp, 0, SEEK_END);
         long file_size = ftell(fp);
