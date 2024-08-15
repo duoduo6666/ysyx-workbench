@@ -6,7 +6,7 @@
 
 #include "Vysyx_2070017_CPU.h"
 
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 256
 
 Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
@@ -54,7 +54,15 @@ int main(int argc, char **argv) {
 
     while (exit_status) {
         pc = top->pc - 0x80000000;
-        top->inst = ((uint32_t*)memory)[pc/4];
+        if (pc > MEMORY_SIZE) {
+            if (top->pc == 0) {
+                printf("未实现的指令 0x%x\n", top->inst);
+            }
+            printf("pc error\n");
+            break;
+        }
+        printf("0x%x\n", *(uint32_t*)(memory+pc));
+        top->inst = (*(uint32_t*)(memory+pc));
         single_cycle();
     }
 
