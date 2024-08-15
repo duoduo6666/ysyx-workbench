@@ -19,6 +19,6 @@ sim:
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		--top-module ysyx_2070017_CPU -o cpu \
 	        csrc/main.cpp vsrc/defines.v vsrc/CPU.v vsrc/IDU.v vsrc/ALU.v vsrc/RF.v vsrc/Mux.v vsrc/Reg.v
-	build/cpu +trace
+	build/cpu
 
 include ../Makefile

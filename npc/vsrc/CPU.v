@@ -1,4 +1,6 @@
+`ifdef VERILATOR
 import "DPI-C" function void set_stop_status();
+`endif
 
 module ysyx_2070017_CPU(
     input clk,
@@ -6,16 +8,20 @@ module ysyx_2070017_CPU(
     input [31:0] inst, // Instruction
 	output [`ysyx_24070017_WORD_TYPE] pc
 );
+
+`ifdef VERILATOR
+
+`ifdef ysyx_2070017_VERILATOR_TRACE
 initial begin
-	if ($test$plusargs("trace") != 0) begin
-		$dumpfile("cpu.fst");
-		$dumpvars();
-	end
+	$dumpfile("cpu.fst");
+	$dumpvars();
 end
+`endif
 
 always@(*) begin
-	if (inst == 32'h00100073) set_stop_status();
+	if (inst == 32'h00100073) set_stop_status(); // ebreak
 end
+`endif
 
 // wire [`ysyx_24070017_WORD_TYPE] pc;
 wire [`ysyx_24070017_WORD_TYPE] snpc; // static next PC
