@@ -1,5 +1,5 @@
 `ifdef VERILATOR
-import "DPI-C" function void set_stop_status();
+import "DPI-C" function void set_exit_status(input int status);
 `endif
 
 module ysyx_2070017_CPU(
@@ -19,7 +19,7 @@ end
 `endif
 
 always@(*) begin
-	if (inst == 32'h00100073) set_stop_status(); // ebreak
+	if (inst == 32'h00100073) set_exit_status(rf_data[(10+1)*`ysyx_24070017_WORD_LENGTH-1:10*`ysyx_24070017_WORD_LENGTH]); // ebreak
 end
 `endif
 
