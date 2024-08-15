@@ -21,39 +21,4 @@ sim:
 	        csrc/main.cpp vsrc/defines.v vsrc/CPU.v vsrc/IDU.v vsrc/ALU.v vsrc/RF.v vsrc/Mux.v vsrc/Reg.v
 	build/cpu +trace
 
-light:
-	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/light.nxdc $(BUILD_DIR)/light_auto_bind.cpp
-	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
-		--top-module light -o light \
-	        $(BUILD_DIR)/light_auto_bind.cpp csrc/light.cpp vsrc/light.v
-	$(BUILD_DIR)/light 
-
-DoubleControlSwitch:
-	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/DoubleControlSwitch.nxdc $(BUILD_DIR)/DoubleControlSwitch_auto_bind.cpp
-	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS)\
-		--top-module DoubleControlSwitch -o DoubleControlSwitch \
-		$(BUILD_DIR)/DoubleControlSwitch_auto_bind.cpp csrc/DoubleControlSwitch.cpp vsrc/DoubleControlSwitch.v
-	$(BUILD_DIR)/DoubleControlSwitch
-
-lab1:
-	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/labs/lab1.nxdc $(BUILD_DIR)/labs/lab1_auto_bind.cpp
-	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
-		--top-module lab1 -o labs/lab1 \
-	        $(BUILD_DIR)/labs/lab1_auto_bind.cpp csrc/labs/lab1.cpp vsrc/labs/lab1.v
-	$(BUILD_DIR)/labs/lab1
-
-lab2:
-	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/labs/lab2.nxdc $(BUILD_DIR)/labs/lab2_auto_bind.cpp
-	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
-		--top-module lab2 -o labs/lab2 \
-	        $(BUILD_DIR)/labs/lab2_auto_bind.cpp csrc/labs/lab2.cpp vsrc/labs/lab2.v
-	$(BUILD_DIR)/labs/lab2
-
-lab3:
-	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py constr/labs/lab3.nxdc $(BUILD_DIR)/labs/lab3_auto_bind.cpp
-	$(VERILATOR) $(VERILATOR_CFLAGS) $(NVBOARD_FLAGS) \
-		--top-module lab3 -o labs/lab3 \
-	        $(BUILD_DIR)/labs/lab3_auto_bind.cpp csrc/labs/lab3.cpp vsrc/labs/lab3.v
-	$(BUILD_DIR)/labs/lab3
-	
 include ../Makefile
