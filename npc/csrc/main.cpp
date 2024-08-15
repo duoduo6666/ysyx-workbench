@@ -20,9 +20,9 @@ void single_cycle() {
     top->clk = 1; top->eval(); contextp->timeInc(500);
 }
 
-extern "C" void set_exit_status() {
+extern "C" void set_exit_status(int status) {
     exit_status = 0;
-    // program_status = status;
+    program_status = status;
 }
 
 int main(int argc, char **argv) {
