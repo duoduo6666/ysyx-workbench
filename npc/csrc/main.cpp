@@ -6,7 +6,7 @@
 
 #include "Vysyx_2070017_CPU.h"
 
-#define MEMORY_SIZE 256
+#define MEMORY_SIZE 65536
 
 Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
@@ -61,7 +61,6 @@ int main(int argc, char **argv) {
             printf("pc error\n");
             break;
         }
-        printf("0x%x\n", *(uint32_t*)(memory+pc));
         top->inst = (*(uint32_t*)(memory+pc));
         single_cycle();
     }
@@ -69,5 +68,11 @@ int main(int argc, char **argv) {
     top->final();
     delete top;
     delete contextp;
+
+    if (program_status == 0) {
+        printf("\033[1;32mHIT GOOD\033[0m\n");
+    } else {
+        printf("\033[1;32mBAD TRAP\033[0m\n");
+    }
     return program_status;
 }
