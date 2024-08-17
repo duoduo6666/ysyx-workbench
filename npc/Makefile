@@ -7,6 +7,10 @@ include $(NVBOARD_HOME)/scripts/nvboard.mk
 
 NVBOARD_FLAGS = $(NVBOARD_ARCHIVE) -$(addprefix -CFLAGS -I, $(NVBOARD_USR_INC)) $(addprefix -LDFLAGS , $(LDFLAGS))
 
+CSRC = $(shell find csrc -name "*.cpp")
+VSRC = $(shell find vsrc -name "*.v")
+READLINE_FLAGS = -LDFLAGS -lreadline
+
 IMG = 
 
 $(shell mkdir -p $(BUILD_DIR))
@@ -17,16 +21,10 @@ all:
 
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	$(VERILATOR) $(VERILATOR_CFLAGS) \
+	$(VERILATOR) $(VERILATOR_CFLAGS) $(READLINE_FLAGS) \
 		--top-module ysyx_2070017_CPU -o cpu \
-		csrc/main.cpp \
-		vsrc/ysyx_2070017_defines.v \
-		vsrc/ysyx_2070017_CPU.v \
-		vsrc/ysyx_2070017_IDU.v \
-		vsrc/ysyx_2070017_ALU.v \
-		vsrc/ysyx_2070017_RF.v \
-		vsrc/ysyx_2070017_Mux.v \
-		vsrc/ysyx_2070017_Reg.v
-	build/cpu $(IMG)
+		$(CSRC) \
+		vsrc/ysyx_2070017_defines.v $(VSRC)
+	build/cpu -b $(IMG)
 
 include ../Makefile
