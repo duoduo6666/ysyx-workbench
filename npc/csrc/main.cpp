@@ -9,6 +9,12 @@
 
 #define MEMORY_SIZE 65536
 
+void init_expr();
+void init_wp_pool();
+void init_disassemble();
+void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
+void sdb_loop();
+
 extern Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
 bool exit_status = 1;
@@ -45,7 +51,7 @@ void parse_args(int argc, char **argv) {
         {0          , 0                , NULL,  0 },
     };
   int o;
-  while ( (o = getopt_long(argc, argv, "bh", option_table, 0)) != -1) {
+  while ( (o = getopt_long(argc, argv, "-bh", option_table, 0)) != -1) {
     switch (o) {
       case 'b': batch_mode = true; break;
     //   case 'd': diff_so_file = optarg; break;
@@ -89,7 +95,7 @@ void init(int argc, char **argv) {
     top->rst = 0;
 }
 
-void cpu_exec(int n) {
+void cpu_exec(int n, bool enable_disassemble) {
     uint32_t pc;
     while (exit_status && n != 0) {
         pc = top->pc - 0x80000000;
@@ -101,22 +107,23 @@ void cpu_exec(int n) {
             break;
         }
         top->inst = (*(uint32_t*)(memory+pc));
+        if (enable_disassemble) {
+            disassemble((uint8_t*)&(top->inst), 4, top->pc);
+        }
         single_cycle();
         n--;
     }
 }
 
-void init_expr();
-void init_wp_pool();
-void sdb_loop();
 int main(int argc, char **argv) {
     init(argc, argv);
 
     if (batch_mode) {
-        cpu_exec(-1);
+        cpu_exec(-1, false);
     } else {
         init_expr();
         init_wp_pool();
+        init_disassemble();
         sdb_loop();
     }
     top->final();

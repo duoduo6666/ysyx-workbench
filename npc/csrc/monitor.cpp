@@ -11,6 +11,7 @@
 typedef uint32_t word_t;
 Vysyx_2070017_CPU *top;
 extern uint8_t memory[MEMORY_SIZE];
+void cpu_exec(int n, bool enable_disassemble);
 word_t expr(char *e, bool *success);
 typedef struct watchpoint {
   int NO;
@@ -22,18 +23,21 @@ typedef struct watchpoint {
 void free_wp(int no);
 WP* new_wp(char* e);
 void display_wp();
+
 const char *reg_names[] = {
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
   "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
   "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7",
   "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"
 };
+
 void display_reg() {
   printf("pc: 0x%x\n", top->pc);
   for (int i=0; i<16; i++) {
     printf("%s: 0x%x\n", reg_names[i], top->rootp->ysyx_2070017_CPU__DOT__rf_data[i]);
   }
 }
+
 word_t get_reg(char* reg, bool *success) {
     if (strcmp(reg, "pc") == 0) {
         *success = true;
@@ -49,10 +53,8 @@ word_t get_reg(char* reg, bool *success) {
     return 0;
 }
 
-void cpu_exec(int n);
-
 static int cmd_c(char *args) {
-    cpu_exec(-1);
+    cpu_exec(-1, false);
     return 0;
 }
 
@@ -67,7 +69,7 @@ int cmd_si(char *args) {
     char *endptr;
     long num = 1;
     if (args) {num = strtol(args, &endptr, 10);}
-    cpu_exec(num);
+    cpu_exec(num, true);
     return 0;
 }
 
