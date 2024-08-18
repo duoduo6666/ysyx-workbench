@@ -14,6 +14,7 @@ void init_wp_pool();
 void init_disassemble();
 void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
 void sdb_loop();
+typedef uint32_t word_t;
 
 extern Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
@@ -95,21 +96,56 @@ void init(int argc, char **argv) {
     top->rst = 0;
 }
 
+// iringbuf
+static word_t iringbuf[10] = {0};
+static int iringbuf_end = 0;
+void display_iringbuf_inst(word_t pc, bool is_end) {
+  if (is_end) {
+    printf("-->");
+  } else {
+    printf("   ");
+  }
+  disassemble(memory+pc, 4, pc);
+}
+void display_iringbuf() {
+  printf("iringbuf: \n");
+  if (iringbuf[(iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t))] == 0){
+    for (int i = 0; i < iringbuf_end-1; i++) {
+      display_iringbuf_inst(iringbuf[i], false);
+    }
+    display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
+  } else {
+    for (int i = iringbuf_end; i < (sizeof(iringbuf)/sizeof(word_t)); i++) {
+      display_iringbuf_inst(iringbuf[i], false);
+    }
+    for (int i = 0; i < iringbuf_end-1; i++) {
+      display_iringbuf_inst(iringbuf[i], false);
+    }
+    display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
+  }
+}
+
 void cpu_exec(int n, bool enable_disassemble) {
-    uint32_t pc;
+    uint32_t memory_offset;
     while (exit_status && n != 0) {
-        pc = top->pc - 0x80000000;
-        if (pc > MEMORY_SIZE) {
+        memory_offset = top->pc - 0x80000000;
+        if (memory_offset > MEMORY_SIZE) {
             if (top->pc == 0) {
-                printf("未实现的指令 0x%x\n", top->inst);
+                printf("可能是未实现的指令 0x%08x\n", top->inst);
             }
-            printf("pc error\n");
+            printf("pc: 0x%08x 无法访问pc指向的内存\n", top->pc);
+            display_iringbuf();
             break;
         }
-        top->inst = (*(uint32_t*)(memory+pc));
+        top->inst = (*(uint32_t*)(memory+memory_offset));
+
+        // itrace
         if (enable_disassemble) {
             disassemble((uint8_t*)&(top->inst), 4, top->pc);
         }
+        iringbuf[iringbuf_end] = memory_offset;
+        iringbuf_end = (iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t));
+
         single_cycle();
         n--;
     }
