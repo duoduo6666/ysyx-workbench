@@ -9,15 +9,18 @@
 
 #define MEMORY_SIZE 65536
 
+typedef uint32_t word_t;
 void init_expr();
 void init_wp_pool();
 void init_disassemble();
 void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
+void init_ftrace();
+void ftrace_check(word_t pc, word_t next_pc);
 void sdb_loop();
-typedef uint32_t word_t;
 
 extern Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
+// extern bool exit_status;
 bool exit_status = 1;
 int program_status = 0;
 
@@ -41,12 +44,16 @@ extern "C" void set_exit_status(int status) {
     }
 }
 
+extern char* img_file;
+extern char* elf_file;
 char* img_file = NULL;
+char* elf_file = NULL;
 bool batch_mode = false;
 
 void parse_args(int argc, char **argv) {
     struct option option_table[] = {
         {"batch"    , no_argument      , NULL, 'b'},
+        {"elf"      , required_argument, NULL, 'e'},
         // {"diff"     , required_argument, NULL, 'd'},
         {"help"     , no_argument      , NULL, 'h'},
         {0          , 0                , NULL,  0 },
@@ -56,10 +63,12 @@ void parse_args(int argc, char **argv) {
     switch (o) {
       case 'b': batch_mode = true; break;
     //   case 'd': diff_so_file = optarg; break;
+      case 'e': elf_file = optarg; break;
       case 1: img_file = optarg; return;
       default:
         printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
         printf("\t-b,--batch              run with batch mode\n");
+        printf("\t-e,--elf                elf file\n");
         // printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
         printf("\n");
         exit(0);
@@ -100,29 +109,29 @@ void init(int argc, char **argv) {
 static word_t iringbuf[10] = {0};
 static int iringbuf_end = 0;
 void display_iringbuf_inst(word_t pc, bool is_end) {
-  if (is_end) {
-    printf("-->");
-  } else {
-    printf("   ");
-  }
-  disassemble(memory+pc, 4, pc);
+    if (is_end) {
+        printf("-->");
+    } else {
+        printf("   ");
+    }
+    disassemble(memory+pc, 4, pc);
 }
 void display_iringbuf() {
-  printf("iringbuf: \n");
-  if (iringbuf[(iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t))] == 0){
-    for (int i = 0; i < iringbuf_end-1; i++) {
-      display_iringbuf_inst(iringbuf[i], false);
+    printf("iringbuf: \n");
+    if (iringbuf[(iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t))] == 0){
+        for (int i = 0; i < iringbuf_end-1; i++) {
+        display_iringbuf_inst(iringbuf[i], false);
+        }
+        display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
+    } else {
+        for (int i = iringbuf_end; i < (sizeof(iringbuf)/sizeof(word_t)); i++) {
+        display_iringbuf_inst(iringbuf[i], false);
+        }
+        for (int i = 0; i < iringbuf_end-1; i++) {
+        display_iringbuf_inst(iringbuf[i], false);
+        }
+        display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
     }
-    display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
-  } else {
-    for (int i = iringbuf_end; i < (sizeof(iringbuf)/sizeof(word_t)); i++) {
-      display_iringbuf_inst(iringbuf[i], false);
-    }
-    for (int i = 0; i < iringbuf_end-1; i++) {
-      display_iringbuf_inst(iringbuf[i], false);
-    }
-    display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
-  }
 }
 
 void cpu_exec(int n, bool enable_disassemble) {
@@ -145,8 +154,10 @@ void cpu_exec(int n, bool enable_disassemble) {
         }
         iringbuf[iringbuf_end] = memory_offset;
         iringbuf_end = (iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t));
-
+        word_t old_pc = top->pc;
         single_cycle();
+        word_t new_pc = top->pc;
+        if (exit_status) ftrace_check(old_pc, new_pc);
         n--;
     }
 }
@@ -160,6 +171,7 @@ int main(int argc, char **argv) {
         init_expr();
         init_wp_pool();
         init_disassemble();
+        init_ftrace();
         sdb_loop();
     }
     top->final();
