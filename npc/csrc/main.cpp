@@ -60,33 +60,34 @@ void parse_args(int argc, char **argv) {
         {"elf"      , required_argument, NULL, 'e'},
         {"diff"     , required_argument, NULL, 'd'},
         {"help"     , no_argument      , NULL, 'h'},
-        {0          , 0                , NULL,  0 },
     };
-  int o;
-  while ( (o = getopt_long(argc, argv, "-bh", option_table, 0)) != -1) {
-    switch (o) {
-      case 'b': batch_mode = true; break;
-      case 'e': elf_file = optarg; break;
-      case 'd': diff_so_file = optarg; break;
-      case 1: img_file = optarg; return;
-      default:
-        printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
-        printf("\t-b,--batch              run with batch mode\n");
-        printf("\t-e,--elf                elf file\n");
-        printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
-        printf("\n");
-        exit(0);
+    int o;
+    while ( (o = getopt_long(argc, argv, "be:d:h", option_table, 0)) != -1) {
+        switch (o) {
+        case 'b': batch_mode = true; break;
+        case 'e': elf_file = optarg; break;
+        case 'd': diff_so_file = optarg; break;
+        default:
+            printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
+            printf("\t-b,--batch              run with batch mode\n");
+            printf("\t-e,--elf                elf file\n");
+            printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
+            printf("\n");
+            exit(0);
+        }
     }
-  }
+    for (int index = optind; index < argc; index++) {
+        img_file = argv[index];
+    }
 }
 
 void init(int argc, char **argv) {
     parse_args(argc, argv);
 
     if (img_file != NULL) {
-        FILE* fp = fopen(argv[1], "r");
+        FILE* fp = fopen(img_file, "r");
         if (fp == NULL) {
-            printf("Can't read %s file\n", argv[1]);
+            printf("Can't read %s file\n", img_file);
         }
         assert(fp != NULL);
         fseek(fp, 0, SEEK_END);
@@ -169,6 +170,7 @@ void cpu_exec(int n, bool enable_disassemble) {
 
 int main(int argc, char **argv) {
     init(argc, argv);
+    init_disassemble();
     init_difftest();
 
     if (batch_mode) {
@@ -176,7 +178,6 @@ int main(int argc, char **argv) {
     } else {
         init_expr();
         init_wp_pool();
-        init_disassemble();
         init_ftrace();
         sdb_loop();
     }
