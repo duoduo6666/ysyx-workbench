@@ -17,17 +17,42 @@
 #include <cpu/cpu.h>
 #include <difftest-def.h>
 #include <memory/paddr.h>
+#include "../local-include/reg.h"
 
 __EXPORT void difftest_memcpy(paddr_t addr, void *buf, size_t n, bool direction) {
-  assert(0);
+  if (direction) {
+    for (size_t i = 0; i < n; i++){
+      paddr_write(addr + i, 1, ((uint8_t*)buf)[i]);
+    }
+  } else {
+    for (size_t i = 0; i < n; i++){
+      ((uint8_t*)buf)[i] = paddr_read(addr + i, 1);
+    }
+  }
 }
 
 __EXPORT void difftest_regcpy(void *dut, bool direction) {
-  assert(0);
+  if (direction) {
+    for (size_t i = 0; i < RISCV_GPR_NUM; i++){
+      gpr(i) = ((word_t*)dut)[i];
+    }
+  } else {
+    for (size_t i = 0; i < RISCV_GPR_NUM; i++){
+      ((word_t*)dut)[i] = gpr(i);
+    }
+  }
+}
+
+__EXPORT void difftest_pccpy(void *dut, bool direction) {
+  if (direction) {
+    cpu.pc = *(word_t*)dut;
+  } else {
+    *(word_t*)dut = cpu.pc;
+  }
 }
 
 __EXPORT void difftest_exec(uint64_t n) {
-  assert(0);
+  cpu_exec(n);
 }
 
 __EXPORT void difftest_raise_intr(word_t NO) {

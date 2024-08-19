@@ -16,11 +16,13 @@ void init_disassemble();
 void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
 void init_ftrace();
 void ftrace_check(word_t pc, word_t next_pc);
+void init_difftest();
+void difftest_check_reg();
 void sdb_loop();
 
 extern Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
-// extern bool exit_status;
+extern bool exit_status;
 bool exit_status = 1;
 int program_status = 0;
 
@@ -46,15 +48,17 @@ extern "C" void set_exit_status(int status) {
 
 extern char* img_file;
 extern char* elf_file;
+extern char* diff_so_file;
 char* img_file = NULL;
 char* elf_file = NULL;
+char* diff_so_file = NULL;
 bool batch_mode = false;
 
 void parse_args(int argc, char **argv) {
     struct option option_table[] = {
         {"batch"    , no_argument      , NULL, 'b'},
         {"elf"      , required_argument, NULL, 'e'},
-        // {"diff"     , required_argument, NULL, 'd'},
+        {"diff"     , required_argument, NULL, 'd'},
         {"help"     , no_argument      , NULL, 'h'},
         {0          , 0                , NULL,  0 },
     };
@@ -62,14 +66,14 @@ void parse_args(int argc, char **argv) {
   while ( (o = getopt_long(argc, argv, "-bh", option_table, 0)) != -1) {
     switch (o) {
       case 'b': batch_mode = true; break;
-    //   case 'd': diff_so_file = optarg; break;
       case 'e': elf_file = optarg; break;
+      case 'd': diff_so_file = optarg; break;
       case 1: img_file = optarg; return;
       default:
         printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
         printf("\t-b,--batch              run with batch mode\n");
         printf("\t-e,--elf                elf file\n");
-        // printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
+        printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
         printf("\n");
         exit(0);
     }
@@ -157,13 +161,17 @@ void cpu_exec(int n, bool enable_disassemble) {
         word_t old_pc = top->pc;
         single_cycle();
         word_t new_pc = top->pc;
-        if (exit_status) ftrace_check(old_pc, new_pc);
+        if (exit_status) {
+            difftest_check_reg();
+            ftrace_check(old_pc, new_pc);
+        }
         n--;
     }
 }
 
 int main(int argc, char **argv) {
     init(argc, argv);
+    init_difftest();
 
     if (batch_mode) {
         cpu_exec(-1, false);
