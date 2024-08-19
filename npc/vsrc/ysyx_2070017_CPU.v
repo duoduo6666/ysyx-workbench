@@ -144,8 +144,6 @@ ysyx_24070017_MuxKey #(7, 7, `ysyx_24070017_WORD_LENGTH) rd_mux (write_data, opc
 	`ysyx_24070017_OPCODE_LOAD,   load
 });
 
-wire is_op_imm;
-assign is_op_imm = opcode == 7'b0010011;
 wire [`ysyx_24070017_WORD_TYPE] alu_src1, alu_src2, alu_result;
 
 ysyx_24070017_MuxKey #(8, 7, `ysyx_24070017_WORD_LENGTH) alu_src1_mux (alu_src1, opcode, {
