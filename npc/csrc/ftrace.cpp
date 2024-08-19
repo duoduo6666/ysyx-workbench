@@ -119,6 +119,7 @@ void ftrace_check(word_t pc, word_t next_pc) {
         if (ELF32_ST_TYPE(symbols[i].st_info) == STT_FUNC) {
             if (ftrace_pc_in_func(pc) == i && (next_pc > symbols[i].st_value + symbols[i].st_size || next_pc < symbols[i].st_value)) {
                 ftrace_deep = ftrace_search_stack(strtab + symbols[i].st_name);
+                printf("ftrace_deep %d\n", ftrace_deep);
                 assert(ftrace_deep > 0);
                 printf("0x%x: ", pc);
                 ftrace_print_deep();

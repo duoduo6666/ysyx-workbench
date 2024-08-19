@@ -161,10 +161,8 @@ void cpu_exec(int n, bool enable_disassemble) {
         word_t old_pc = top->pc;
         single_cycle();
         word_t new_pc = top->pc;
-        if (exit_status) {
-            difftest_check_reg();
-            ftrace_check(old_pc, new_pc);
-        }
+        if (exit_status) difftest_check_reg();
+        if (exit_status) ftrace_check(old_pc, new_pc);
         n--;
     }
 }
