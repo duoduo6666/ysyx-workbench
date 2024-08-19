@@ -9,6 +9,9 @@
 
 #define MEMORY_SIZE 65536
 
+// #define CONFIG_MTARCE
+// #define CONFIG_FTARCE
+
 typedef uint32_t word_t;
 void init_expr();
 void init_wp_pool();
@@ -18,6 +21,8 @@ void init_ftrace();
 void ftrace_check(word_t pc, word_t next_pc);
 void init_difftest();
 void difftest_check_reg();
+void display_reg();
+void display_iringbuf();
 void sdb_loop();
 
 extern Vysyx_2070017_CPU *top;
@@ -41,8 +46,54 @@ extern "C" void set_exit_status(int status) {
         if (program_status == 0) {
             printf("\033[1;32mHIT GOOD\033[0m\n");
         } else {
-            printf("\033[1;32mBAD TRAP\033[0m\n");
+            display_reg();
+            display_iringbuf();
+            printf("\033[1;31mBAD TRAP\033[0m\n");
         }
+    }
+}
+extern "C" int pmem_read(int raddr) {
+    word_t memory_offset = raddr - 0x80000000;
+    if (memory_offset >= MEMORY_SIZE) {
+        // printf("error address 0x%08x\n", raddr);
+        // set_exit_status(-1);
+        return 0;
+    }
+#ifdef CONFIG_MTARCE
+    printf("memory read 0x%08x: 0x%08x\n", raddr, *(uint32_t*)(&(memory[memory_offset])));
+#endif
+    return *(uint32_t*)(&(memory[memory_offset]));
+}
+extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+    static word_t pc;
+    pc = top->pc;
+    word_t memory_offset = waddr - 0x80000000;
+    if (memory_offset >= MEMORY_SIZE) {
+        printf("error address 0x%08x\n", waddr);
+        set_exit_status(-1);
+        return;
+    }
+    switch (wmask) {
+    case 0b0001:
+#ifdef CONFIG_MTARCE
+        printf("memory write 0x%08x: 0x%08x\n", waddr, (uint8_t)wdata);
+#endif
+        memory[memory_offset] = (uint8_t)wdata;
+        break;
+    case 0b0011:
+#ifdef CONFIG_MTARCE
+        printf("memory write 0x%08x: 0x%08x\n", waddr, (uint16_t)wdata);
+#endif
+        *(uint16_t*)(&(memory[memory_offset])) = (uint16_t)wdata;
+        break;
+    case 0b1111:
+#ifdef CONFIG_MTARCE
+        printf("memory write 0x%08x: 0x%08x\n", waddr, wdata);
+#endif
+        *(uint32_t*)(&(memory[memory_offset])) = wdata;
+        break;
+    default:
+        assert(0);
     }
 }
 
@@ -119,7 +170,7 @@ void display_iringbuf_inst(word_t pc, bool is_end) {
     } else {
         printf("   ");
     }
-    disassemble(memory+pc, 4, pc);
+    disassemble(memory+(pc-0x80000000), 4, pc);
 }
 void display_iringbuf() {
     printf("iringbuf: \n");
@@ -157,19 +208,24 @@ void cpu_exec(int n, bool enable_disassemble) {
         if (enable_disassemble) {
             disassemble((uint8_t*)&(top->inst), 4, top->pc);
         }
-        iringbuf[iringbuf_end] = memory_offset;
+        iringbuf[iringbuf_end] = top->pc;
         iringbuf_end = (iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t));
         word_t old_pc = top->pc;
         single_cycle();
         word_t new_pc = top->pc;
         if (exit_status) difftest_check_reg();
+#ifdef CONFIG_FTARCE
         if (exit_status) ftrace_check(old_pc, new_pc);
+#endif
         n--;
     }
 }
 
 int main(int argc, char **argv) {
     init(argc, argv);
+#ifdef CONFIG_FTARCE
+    init_ftrace();
+#endif
     init_disassemble();
     init_difftest();
 
@@ -178,7 +234,6 @@ int main(int argc, char **argv) {
     } else {
         init_expr();
         init_wp_pool();
-        init_ftrace();
         sdb_loop();
     }
     top->final();

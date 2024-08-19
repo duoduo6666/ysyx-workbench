@@ -16,6 +16,7 @@ extern const char *reg_names[];
 extern char* diff_so_file;
 char default_diff_so_file[] = "/build/riscv32-nemu-interpreter-so";
 void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
+extern "C" void set_exit_status(int status);
 
 typedef uint32_t word_t;
 typedef uint32_t paddr_t;
@@ -54,14 +55,12 @@ void difftest_check_reg() {
     difftest_regcpy(ref_regs, 0);
     if (top->pc != ref_pc) {
         printf("difftest pc reg error: \nref: 0x%x \ndut: 0x%x\n", ref_pc, top->pc);
-        disassemble((uint8_t*)&(top->inst), 4, top->pc);
-        exit_status = 0;
+        set_exit_status(-1);
     }
     for (size_t i = 0; i < 16; i++) {
         if (top->rootp->ysyx_2070017_CPU__DOT__rf_data[i] != ref_regs[i]) {
             printf("difftest %s reg error: \nref: 0x%x \ndut: 0x%x\n", reg_names[i], ref_regs[i], top->rootp->ysyx_2070017_CPU__DOT__rf_data[i]);
-            disassemble((uint8_t*)&(top->inst), 4, top->pc);
-            exit_status = 0;
+            set_exit_status(-1);
         }
     }
 }
