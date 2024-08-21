@@ -186,8 +186,6 @@ void ftrace_check(vaddr_t pc, vaddr_t next_pc) {
 static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
-  isa_exec_once(s);
-  cpu.pc = s->dnpc;
 #ifdef CONFIG_ITRACE
   itrace(s->logbuf, sizeof(s->logbuf), pc, s->isa.inst.val, s->snpc - s->pc);
 
@@ -195,6 +193,8 @@ static void exec_once(Decode *s, vaddr_t pc) {
   iringbuf[iringbuf_end] = pc;
   iringbuf_end = (iringbuf_end+1) % MAX_INST_TO_PRINT;
 #endif
+  isa_exec_once(s);
+  cpu.pc = s->dnpc;
 }
 
 static void execute(uint64_t n) {
