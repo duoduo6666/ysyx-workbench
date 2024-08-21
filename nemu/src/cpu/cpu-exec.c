@@ -46,6 +46,7 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 
 
 // iringbuf
+#ifdef CONFIG_ITRACE
 static word_t iringbuf[MAX_INST_TO_PRINT] = {0};
 static int iringbuf_end = 0;
 
@@ -73,6 +74,7 @@ void itrace(char *buf, size_t buf_len, word_t pc, uint32_t inst_val, int inst_le
     p[0] = '\0'; // the upstream llvm does not support loongarch32r
   #endif
 }
+#endif
 
 #ifdef CONFIG_FTRACE
 Elf32_Sym* symbols;
@@ -217,6 +219,7 @@ static void statistic() {
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
 }
 
+#ifdef CONFIG_ITRACE
 word_t vaddr_ifetch(vaddr_t addr, int len);
 void iringbuf_inst_output(word_t pc, bool is_end) {
   char buf[128];
@@ -252,6 +255,7 @@ void iringbuf_display() {
     iringbuf_inst_output(iringbuf[iringbuf_end-1], true);
   }
 }
+#endif
 
 void assert_fail_msg() {
   isa_reg_display();
