@@ -56,7 +56,6 @@ size_t format_write_int(bool target, char* string, int value) {
 }
 
 int format(bool target, const char *fmt, char* out, va_list ap) {
-  putstr("format\n");
   int out_i = 0;
   for (size_t i = 0; fmt[i] != 0; i++) {
     if (fmt[i] == '%') {
