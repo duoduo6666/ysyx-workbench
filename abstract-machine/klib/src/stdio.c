@@ -60,7 +60,7 @@ size_t format_write_int(bool target, char* string, int value) {
   return i;
 }
 
-size_t format_write_hex(bool target, char* string, int value) {
+size_t format_write_hex(bool target, char* string, unsigned int value) {
   char buf[8];
   size_t i = 0;
 
@@ -155,6 +155,13 @@ int format(bool target, const char *fmt, char* out, va_list ap) {
             break;
           case 'x':
             value = va_arg(ap, int);
+            out_i += format_write_hex(target, out + out_i, value);
+            format_padding = 0;
+            format_width = 0;
+            end = 1;
+            break;
+          case 'p':
+            value = (uint32_t)va_arg(ap, void*);
             out_i += format_write_hex(target, out + out_i, value);
             format_padding = 0;
             format_width = 0;
