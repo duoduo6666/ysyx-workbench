@@ -17,13 +17,32 @@
 #define __RISCV_REG_H__
 
 #include <common.h>
+#include <isa.h>
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32)));
   return idx;
 }
 
+static inline word_t* csr_reg_idx(int idx) {
+  switch (idx){
+    case 0x305:
+      return &(cpu.csr.mtvec);
+    case 0x341:
+      return &(cpu.csr.mepc);
+    case 0x300:
+      return &(cpu.csr.mstatus);
+    case 0x342:
+      return &(cpu.csr.mcause);
+    default:
+      break;
+  }
+  assert(0);
+  return 0;
+}
+
 #define gpr(idx) (cpu.gpr[check_reg_idx(idx)])
+#define csr(idx) (*csr_reg_idx(idx))
 
 static inline const char* reg_name(int idx) {
   extern const char* regs[];
