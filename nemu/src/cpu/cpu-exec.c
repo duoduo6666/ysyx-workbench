@@ -49,6 +49,7 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 
 // iringbuf
 #ifdef CONFIG_ITRACE
+word_t vaddr_ifetch(vaddr_t addr, int len);
 static word_t iringbuf[MAX_INST_TO_PRINT] = {0};
 static int iringbuf_end = 0;
 
@@ -191,7 +192,8 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
 #ifdef CONFIG_ITRACE
-  itrace(s->logbuf, sizeof(s->logbuf), pc, s->isa.inst.val, s->snpc - s->pc);
+// 运行除32bit指令以外的指令会出现问题
+  itrace(s->logbuf, sizeof(s->logbuf), pc, vaddr_ifetch(pc, 4), 4);
   
   // iringbuf
   assert(iringbuf_end < MAX_INST_TO_PRINT);
@@ -225,7 +227,6 @@ static void statistic() {
 }
 
 #ifdef CONFIG_ITRACE
-word_t vaddr_ifetch(vaddr_t addr, int len);
 void iringbuf_inst_output(word_t pc, bool is_end) {
   assert(pc >= 0x80000000);
   char buf[128];
