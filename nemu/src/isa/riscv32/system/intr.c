@@ -16,6 +16,10 @@
 #include <isa.h>
 
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
+#ifdef CONFIG_ETRACE
+  printf("etrace: ecall");
+  isa_reg_display();
+#endif
   cpu.csr.mepc = epc;
   cpu.csr.mcause = 0xb;
   return cpu.csr.mtvec;
