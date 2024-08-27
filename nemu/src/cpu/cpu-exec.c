@@ -192,9 +192,12 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->snpc = pc;
 #ifdef CONFIG_ITRACE
   itrace(s->logbuf, sizeof(s->logbuf), pc, s->isa.inst.val, s->snpc - s->pc);
-
+  
   // iringbuf
+  assert(iringbuf_end < MAX_INST_TO_PRINT);
+  assert(pc >= 0x80000000);
   iringbuf[iringbuf_end] = pc;
+  assert(iringbuf[iringbuf_end] >= 0x80000000);
   iringbuf_end = (iringbuf_end+1) % MAX_INST_TO_PRINT;
 #endif
   isa_exec_once(s);
@@ -224,6 +227,7 @@ static void statistic() {
 #ifdef CONFIG_ITRACE
 word_t vaddr_ifetch(vaddr_t addr, int len);
 void iringbuf_inst_output(word_t pc, bool is_end) {
+  assert(pc >= 0x80000000);
   char buf[128];
   itrace(buf+3, sizeof(buf)-3, pc, vaddr_ifetch(pc, 4), 4);
   if (is_end) {
@@ -249,6 +253,10 @@ void iringbuf_display() {
     iringbuf_inst_output(iringbuf[iringbuf_end-1], true);
   } else {
     for (int i = iringbuf_end; i < MAX_INST_TO_PRINT; i++) {
+      if ((iringbuf_end == 0) && (i == (MAX_INST_TO_PRINT-1))) {
+        iringbuf_inst_output(iringbuf[MAX_INST_TO_PRINT-1], true);
+        return;
+      }
       iringbuf_inst_output(iringbuf[i], false);
     }
     for (int i = 0; i < iringbuf_end-1; i++) {
