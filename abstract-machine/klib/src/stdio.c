@@ -153,6 +153,9 @@ int format(bool target, const char *fmt, char* out, va_list ap) {
             format_width = 0;
             end = 1;
             break;
+          case 'l':
+            assert(sizeof(long) == sizeof(int));
+            break;
           case 'x':
             value = va_arg(ap, int);
             out_i += format_write_hex(target, out + out_i, value);
@@ -168,7 +171,8 @@ int format(bool target, const char *fmt, char* out, va_list ap) {
             end = 1;
             break;
           default:
-            panic("未知格式化字符");
+            printf("未知格式化字符 %c\n", fmt[i]);
+            assert(0);
             end = 1;
             break;
         } 
