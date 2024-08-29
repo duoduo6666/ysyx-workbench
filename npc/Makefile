@@ -10,7 +10,8 @@ VSRC = $(shell find vsrc -name "*.v")
 
 # READLINE_FLAGS = -LDFLAGS -lreadline
 READLINE_FLAGS = $(addprefix -LDFLAGS , -lreadline)
-LLVM_FLAGS = $(addprefix -CFLAGS , $(shell llvm-config --cxxflags))  $(addprefix -LDFLAGS , $(shell llvm-config --libs))
+# LLVM_FLAGS = $(addprefix -CFLAGS , $(shell llvm-config --cxxflags))  $(addprefix -LDFLAGS , $(shell llvm-config --libs))
+LLVM_FLAGS = $(addprefix -LDFLAGS , $(shell llvm-config --libs))
 
 IMG = 
 
