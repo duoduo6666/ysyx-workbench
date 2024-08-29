@@ -10,9 +10,10 @@
 
 #define MEMORY_SIZE 0x8000000
 
-#define CONFIG_ITARCE
+// #define CONFIG_ITARCE
 // #define CONFIG_MTARCE
 // #define CONFIG_FTARCE
+// #define CONFIG_DIFFTEST
 
 #define DEVICE_SERIAL_ADDR 0xa00003F8
 #define DEVICE_RTC_ADDR  0xa0000048
@@ -71,9 +72,12 @@ extern "C" int pmem_read(int raddr) {
     if (raddr == DEVICE_RTC_ADDR || raddr == DEVICE_RTC_ADDR+4) {
         assert(timespec_get(&time, TIME_UTC) == TIME_UTC);
         old_data = time.tv_nsec;
+#ifdef CONFIG_DIFFTEST
         difftest_set_skip();
+#endif
         uint64_t us = time.tv_sec * 1000000 + time.tv_nsec / 1000;
         if (raddr == DEVICE_RTC_ADDR) {
+            // printf("get rtc\n");
             old_data = (uint32_t)us;
             return (uint32_t)us;
         }
@@ -100,8 +104,12 @@ extern "C" void pmem_write(int waddr, int wdata, char wmask) {
 
     if (waddr == DEVICE_SERIAL_ADDR) {
         if (wmask != 1) assert(0);
+            // printf("write SERIAL\n");
         putchar(wdata & 0xff);
+        fflush(stdout);
+#ifdef CONFIG_DIFFTEST
         difftest_set_skip();
+#endif
         return;
     }
     static word_t pc;
@@ -258,11 +266,13 @@ void cpu_exec(int n, bool enable_disassemble) {
         word_t old_pc = top->pc;
         single_cycle();
         word_t new_pc = top->pc;
+#ifdef CONFIG_DIFFTEST
         if (exit_status) difftest_check_reg();
+#endif
 #ifdef CONFIG_FTARCE
         if (exit_status) ftrace_check(old_pc, new_pc);
 #endif
-        n--;
+        if (n > 0) n--;
     }
 }
 
@@ -271,8 +281,12 @@ int main(int argc, char **argv) {
 #ifdef CONFIG_FTARCE
     init_ftrace();
 #endif
+#ifdef CONFIG_ITARCE
     init_disassemble();
+#endif
+#ifdef CONFIG_DIFFTEST
     init_difftest();
+#endif
 
     if (batch_mode) {
         cpu_exec(-1, false);
