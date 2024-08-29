@@ -10,8 +10,8 @@ assign rdata[`ysyx_24070017_WORD_TYPE] = {`ysyx_24070017_WORD_LENGTH{1'b0}};
 
 genvar i;
 generate
-    for(i=1; i<`ysyx_24070017_RF_REG_NUM; i=i+1) begin: xreg
-        ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, {`ysyx_24070017_WORD_LENGTH{1'b0}}) xreg (
+    for(i=1; i<`ysyx_24070017_RF_REG_NUM; i=i+1) begin: gpr
+        ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, {`ysyx_24070017_WORD_LENGTH{1'b0}}) gpr (
             .clk(clk),
             .rst(rst),
             .wen(we[i]),
