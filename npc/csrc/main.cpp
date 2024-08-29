@@ -66,6 +66,22 @@ extern "C" int pmem_read(int raddr) {
     static int old_data = 0;
     if (new_clk == false) return old_data;
     new_clk = false;
+    
+    struct timespec time;
+    if (raddr == DEVICE_RTC_ADDR || raddr == DEVICE_RTC_ADDR+4) {
+        assert(timespec_get(&time, TIME_UTC) == TIME_UTC);
+        old_data = time.tv_nsec;
+        difftest_set_skip();
+        uint64_t us = time.tv_sec * 1000000 + time.tv_nsec / 1000;
+        if (raddr == DEVICE_RTC_ADDR) {
+            old_data = (uint32_t)us;
+            return (uint32_t)us;
+        }
+        else if (raddr == DEVICE_RTC_ADDR+4) {
+            old_data = (uint32_t)(us >> 32);
+            return (uint32_t)(us >> 32);
+        }
+    }
 
     word_t memory_offset = raddr - 0x80000000;
     if (memory_offset >= MEMORY_SIZE) {
