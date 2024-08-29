@@ -7,7 +7,7 @@
 #include "Vysyx_2070017_CPU.h"
 #include "Vysyx_2070017_CPU___024root.h"
 
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 0x8000000
 
 extern Vysyx_2070017_CPU *top;
 extern uint8_t memory[MEMORY_SIZE];

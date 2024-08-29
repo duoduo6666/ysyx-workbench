@@ -5,7 +5,7 @@
 
 #include "Vysyx_2070017_CPU.h"
 #include "Vysyx_2070017_CPU___024root.h"
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 0x8000000
 #define MEMORY_LEFT  0x80000000
 #define MEMORY_RIGHT MEMORY_LEFT + MEMORY_SIZE
 typedef uint32_t word_t;

@@ -1,19 +1,21 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "verilated.h"
 #include "svdpi.h"
 
 #include "Vysyx_2070017_CPU.h"
 
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 0x8000000
 
 #define CONFIG_ITARCE
 // #define CONFIG_MTARCE
 // #define CONFIG_FTARCE
 
 #define DEVICE_SERIAL_ADDR 0xa00003F8
+#define DEVICE_RTC_ADDR  0xa0000048
 
 typedef uint32_t word_t;
 void init_expr();

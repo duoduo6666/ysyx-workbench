@@ -5,7 +5,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 0x8000000
 #define MEMORY_LEFT  0x80000000
 #define MEMORY_RIGHT MEMORY_LEFT + MEMORY_SIZE
 
