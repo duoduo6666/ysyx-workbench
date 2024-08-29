@@ -9,8 +9,11 @@
 
 #define MEMORY_SIZE 65536
 
+// #define CONFIG_ITARCE
 // #define CONFIG_MTARCE
 // #define CONFIG_FTARCE
+
+#define DEVICE_SERIAL_ADDR 0xa00003F8
 
 typedef uint32_t word_t;
 void init_expr();
@@ -47,7 +50,9 @@ extern "C" void set_exit_status(int status) {
             printf("\033[1;32mHIT GOOD\033[0m\n");
         } else {
             display_reg();
+#ifdef CONFIG_ITARCE
             display_iringbuf();
+#endif
             printf("\033[1;31mBAD TRAP\033[0m\n");
         }
     }
@@ -161,7 +166,8 @@ void init(int argc, char **argv) {
     top->rst = 0;
 }
 
-// iringbuf
+
+#ifdef CONFIG_ITARCE
 static word_t iringbuf[10] = {0};
 static int iringbuf_end = 0;
 void display_iringbuf_inst(word_t pc, bool is_end) {
@@ -189,6 +195,7 @@ void display_iringbuf() {
         display_iringbuf_inst(iringbuf[iringbuf_end-1], true);
     }
 }
+#endif
 
 void cpu_exec(int n, bool enable_disassemble) {
     uint32_t memory_offset;
@@ -199,17 +206,21 @@ void cpu_exec(int n, bool enable_disassemble) {
                 printf("可能是未实现的指令 0x%08x\n", top->inst);
             }
             printf("pc: 0x%08x 无法访问pc指向的内存\n", top->pc);
+#ifdef CONFIG_ITARCE
             display_iringbuf();
+#endif
             break;
         }
         top->inst = (*(uint32_t*)(memory+memory_offset));
 
-        // itrace
+#ifdef CONFIG_ITARCE
         if (enable_disassemble) {
             disassemble((uint8_t*)&(top->inst), 4, top->pc);
         }
         iringbuf[iringbuf_end] = top->pc;
         iringbuf_end = (iringbuf_end+1) % (sizeof(iringbuf)/sizeof(word_t));
+#endif
+
         word_t old_pc = top->pc;
         single_cycle();
         word_t new_pc = top->pc;
