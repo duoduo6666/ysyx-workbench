@@ -1,6 +1,8 @@
 #include <am.h>
 #include <klib-macros.h>
 
+#include "riscv/npc/device_addr.h"
+
 extern char _heap_start;
 int main(const char *args);
 
@@ -15,6 +17,7 @@ Area heap = RANGE(&_heap_start, PMEM_END);
 static const char mainargs[] = MAINARGS;
 
 void putch(char ch) {
+  *(uint8_t*)SERIAL_PORT = ch;
 }
 
 void halt(int code) {

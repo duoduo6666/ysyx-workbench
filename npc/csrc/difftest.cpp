@@ -25,6 +25,8 @@ void (*difftest_regcpy)(void*, bool);
 void (*difftest_pccpy)(void*, bool);
 void (*difftest_exec)(uint64_t);
 
+bool skip_difftest = false;
+
 void init_difftest() {
     if (diff_so_file == NULL) {
         diff_so_file = (char*)calloc(strlen(getenv("NEMU_HOME")) + sizeof(default_diff_so_file), sizeof(char));
@@ -47,9 +49,21 @@ void init_difftest() {
     difftest_pccpy(&(top->pc), 1);
 }
 
+void difftest_set_skip() {
+    skip_difftest = true;
+}
+
 void difftest_check_reg() {
     word_t ref_pc;
     word_t ref_regs[32];
+
+    if (skip_difftest) {
+        difftest_pccpy(&top->pc, 1);
+        difftest_regcpy(top->rootp->ysyx_2070017_CPU__DOT__rf_data, 1);
+        skip_difftest = false;
+        return;
+    }
+
     difftest_exec(1);
     difftest_pccpy(&ref_pc, 0);
     difftest_regcpy(ref_regs, 0);

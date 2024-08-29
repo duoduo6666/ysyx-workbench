@@ -9,7 +9,7 @@
 
 #define MEMORY_SIZE 65536
 
-// #define CONFIG_ITARCE
+#define CONFIG_ITARCE
 // #define CONFIG_MTARCE
 // #define CONFIG_FTARCE
 
@@ -23,6 +23,7 @@ void disassemble(uint8_t *inst, size_t inst_len, uint64_t pc);
 void init_ftrace();
 void ftrace_check(word_t pc, word_t next_pc);
 void init_difftest();
+void difftest_set_skip();
 void difftest_check_reg();
 void display_reg();
 void display_iringbuf();
@@ -31,15 +32,17 @@ void sdb_loop();
 extern Vysyx_2070017_CPU *top;
 VerilatedContext *contextp;
 extern bool exit_status;
-bool exit_status = 1;
+bool exit_status = 1; // 1 = run, 0 == stop
 int program_status = 0;
 
 extern uint8_t memory[MEMORY_SIZE];
 uint8_t memory[MEMORY_SIZE] = {0};
 
+bool new_clk = 0;
 void single_cycle() {
     top->clk = 0; top->eval(); contextp->timeInc(500);
     top->clk = 1; top->eval(); contextp->timeInc(500);
+    new_clk = 1;
 }
 
 extern "C" void set_exit_status(int status) {
@@ -58,18 +61,31 @@ extern "C" void set_exit_status(int status) {
     }
 }
 extern "C" int pmem_read(int raddr) {
+    static int old_data = 0;
+    if (new_clk == false) return old_data;
+    new_clk = false;
+
     word_t memory_offset = raddr - 0x80000000;
     if (memory_offset >= MEMORY_SIZE) {
-        // printf("error address 0x%08x\n", raddr);
-        // set_exit_status(-1);
-        return 0;
+        printf("error address 0x%08x\n", raddr);
+        set_exit_status(-1);
     }
 #ifdef CONFIG_MTARCE
     printf("memory read 0x%08x: 0x%08x\n", raddr, *(uint32_t*)(&(memory[memory_offset])));
 #endif
+    old_data = *(uint32_t*)(&(memory[memory_offset]));
     return *(uint32_t*)(&(memory[memory_offset]));
 }
 extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+    if (new_clk == false) return;
+    new_clk = false;
+
+    if (waddr == DEVICE_SERIAL_ADDR) {
+        if (wmask != 1) assert(0);
+        putchar(wdata & 0xff);
+        difftest_set_skip();
+        return;
+    }
     static word_t pc;
     pc = top->pc;
     word_t memory_offset = waddr - 0x80000000;
