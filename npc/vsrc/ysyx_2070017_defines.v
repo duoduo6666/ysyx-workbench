@@ -1,7 +1,7 @@
 `ifndef ysyx_24070017_DEFINES
 `define ysyx_24070017_DEFINES
 
-`define ysyx_2070017_VERILATOR_TRACE
+// `define ysyx_2070017_VERILATOR_TRACE
 
 // `define ysyx_24070017_RV32I
 `define ysyx_24070017_RV32E
@@ -27,5 +27,6 @@
 `define ysyx_24070017_OPCODE_OP     7'b0110011
 `define ysyx_24070017_OPCODE_AUIPC  7'b0010111
 `define ysyx_24070017_OPCODE_LUI    7'b0110111
+`define ysyx_24070017_OPCODE_SYSTEM 7'b1110011
 
 `endif

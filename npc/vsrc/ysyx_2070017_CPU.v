@@ -66,14 +66,21 @@ ysyx_24070017_MuxKey #(6, 3, 1) branch_mux (branch, funct3, {
 });
 
 wire is_jump_inst;
+wire is_ecall, is_mret;
+assign is_ecall = (inst == 32'h00000073);
+assign is_mret = (inst == 32'h30200073);
 assign is_jump_inst = (
 	(opcode==`ysyx_24070017_OPCODE_BRANCH && branch) ||
 	(opcode==`ysyx_24070017_OPCODE_JALR)             ||
 	(opcode==`ysyx_24070017_OPCODE_JAL)
 );
-	
 
-assign dnpc = (snpc & {`ysyx_24070017_WORD_LENGTH{(!is_jump_inst)}}) | (alu_result & {`ysyx_24070017_WORD_LENGTH{is_jump_inst}});
+assign dnpc = (
+	(snpc & {`ysyx_24070017_WORD_LENGTH{(!(is_jump_inst | is_ecall | is_mret))}})    | 
+	(alu_result & {`ysyx_24070017_WORD_LENGTH{is_jump_inst}}) |
+	(mtvec & {`ysyx_24070017_WORD_LENGTH{is_ecall}})          |
+	(mepc & {`ysyx_24070017_WORD_LENGTH{is_mret}})
+);
 
 ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, 32'h80000000) pc_reg (
 	.clk(clk),
@@ -115,7 +122,8 @@ assign need_rd = (
 	(opcode == `ysyx_24070017_OPCODE_JALR)   |
 	(opcode == `ysyx_24070017_OPCODE_LOAD)   |
 	(opcode == `ysyx_24070017_OPCODE_OP_IMM) |
-	(opcode == `ysyx_24070017_OPCODE_OP)
+	(opcode == `ysyx_24070017_OPCODE_OP)     |
+	((opcode == `ysyx_24070017_OPCODE_SYSTEM) && (funct3 != 3'b000))
 );
 assign rfwe = rd_decode & {`ysyx_24070017_RF_REG_NUM{need_rd}};
 
@@ -134,14 +142,15 @@ assign rs2_data_t = rf_data>>(rs2*`ysyx_24070017_WORD_LENGTH);
 assign rs1_data = rs1_data_t[`ysyx_24070017_WORD_TYPE];
 assign rs2_data = rs2_data_t[`ysyx_24070017_WORD_TYPE];
 
-ysyx_24070017_MuxKey #(7, 7, `ysyx_24070017_WORD_LENGTH) rd_mux (write_data, opcode, {
+ysyx_24070017_MuxKey #(8, 7, `ysyx_24070017_WORD_LENGTH) rd_mux (write_data, opcode, {
 	`ysyx_24070017_OPCODE_LUI,    immU,
 	`ysyx_24070017_OPCODE_AUIPC,  alu_result,
 	`ysyx_24070017_OPCODE_JAL,    snpc,
 	`ysyx_24070017_OPCODE_JALR,   snpc,
 	`ysyx_24070017_OPCODE_OP_IMM, alu_result,
 	`ysyx_24070017_OPCODE_OP,     alu_result,
-	`ysyx_24070017_OPCODE_LOAD,   load
+	`ysyx_24070017_OPCODE_LOAD,   load,
+	`ysyx_24070017_OPCODE_SYSTEM, csr_read
 });
 
 wire [`ysyx_24070017_WORD_TYPE] alu_src1, alu_src2, alu_result;
@@ -174,6 +183,51 @@ ysyx_2070017_ALU alu(
 	.src1(alu_src1),
 	.src2(alu_src2),
 	.result(alu_result)
+);
+
+
+wire [`ysyx_24070017_WORD_TYPE] csr_read, csr_write, csr_write_mask;
+ysyx_24070017_MuxKey #(4, 12, `ysyx_24070017_WORD_LENGTH) csr_read_mux (csr_read, immI[11:0], {
+	12'h300,  mstatus,
+	12'h305,  mtvec,
+	12'h341,  mepc,
+	12'h342,  mcause
+});
+assign csr_write_mask = funct3[2] ? {{(`ysyx_24070017_WORD_LENGTH-5){1'b0}},rs1} : rs1_data;
+ysyx_24070017_MuxKey #(3, 2, `ysyx_24070017_WORD_LENGTH) csr_write_mux (csr_write, funct3[1:0], {
+	2'b01,  csr_write_mask,
+	2'b10,  csr_read | (csr_write_mask),
+	2'b11,  csr_read & (~csr_write_mask)
+});
+
+wire [`ysyx_24070017_WORD_TYPE] mstatus, mtvec, mepc, mcause;
+ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, 32'h00000000) mstatus_r (
+	.clk(clk),
+	.rst(rst),
+	.wen(opcode==`ysyx_24070017_OPCODE_SYSTEM && immI[11:0] == 12'h300 && (funct3 != 3'b000)),
+	.din(csr_write),
+	.dout(mstatus)
+);
+ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, 32'h00000000) mtvec_t (
+	.clk(clk),
+	.rst(rst),
+	.wen(opcode==`ysyx_24070017_OPCODE_SYSTEM && immI[11:0] == 12'h305 && (funct3 != 3'b000)),
+	.din(csr_write),
+	.dout(mtvec)
+);
+ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, 32'h00000000) mepc_r (
+	.clk(clk),
+	.rst(rst),
+	.wen((opcode==`ysyx_24070017_OPCODE_SYSTEM && immI[11:0] == 12'h341 && (funct3 != 3'b000)) || is_ecall),
+	.din(is_ecall ? pc : csr_write),
+	.dout(mepc)
+);
+ysyx_24070017_Reg #(`ysyx_24070017_WORD_LENGTH, 32'h00000000) mcause_r (
+	.clk(clk),
+	.rst(rst),
+	.wen((opcode==`ysyx_24070017_OPCODE_SYSTEM && immI[11:0] == 12'h342 && (funct3 != 3'b000)) || is_ecall),
+	.din(is_ecall ? 32'hb : csr_write),
+	.dout(mcause)
 );
 
 endmodule
