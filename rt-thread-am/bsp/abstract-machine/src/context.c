@@ -45,6 +45,5 @@ rt_uint8_t *rt_hw_stack_init(void *tentry, void *parameter, rt_uint8_t *stack_ad
   Context *context = kcontext((Area){stack_addr, stack_addr}, (void (*)(void (*)))wrap_func, tentry);
   context->gpr[11] = (uintptr_t)parameter;
   context->gpr[12] = (uintptr_t)texit;
-  printf("init %p\n", context);
   return (rt_uint8_t*)context;
 }
